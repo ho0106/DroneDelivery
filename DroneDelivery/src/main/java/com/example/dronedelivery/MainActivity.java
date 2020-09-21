@@ -516,8 +516,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         if (vehicleState.isFlying()) {
             onArmButtonFunction(mDroneAltitude);
         } else if (vehicleState.isArmed()) {
-            title.setText("지정한 이륙고도까지 기체가 상승합니다.");
-            message.setText("안전거리를 유지하세요.");
+            title.setText("이륙 경고");
+            message.setText("지정한 이륙고도까지 기체가 상승합니다.\n안전거리를 유지하세요.");
             addressLayout.setVisibility(View.GONE);
             btnPositive.setOnClickListener(new View.OnClickListener() {
                 @Override
@@ -536,8 +536,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         } else if (!vehicleState.isConnected()) {
             alertUserError("드론을 먼저 연결해주세요.");
         } else {
-            title.setText("모터를 가동합니다.");
-            message.setText("모터가 고속으로 회전합니다.");
+            title.setText("시동 경고");
+            message.setText("모터를 가동합니다.\n모터가 고속으로 회전합니다.");
             addressLayout.setVisibility(View.GONE);
             btnPositive.setOnClickListener(new View.OnClickListener() {
                 @Override
@@ -712,10 +712,12 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 break;
         }
 
-        TextView title = dialogView.findViewById(R.id.title);
-        title.setText("주소를 입력해 주세요");
         TextView message = dialogView.findViewById(R.id.message);
         message.setVisibility(View.GONE);
+
+        TextView title = dialogView.findViewById(R.id.title);
+        title.setText("주소를 입력해 주세요");
+
         final EditText editText = dialogView.findViewById(R.id.addressBox);
         Button btnPositive = dialogView.findViewById(R.id.btnPositive);
         btnPositive.setOnClickListener(new View.OnClickListener() {
@@ -733,7 +735,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
                 if (list != null) {
                     if (list.size() == 0) {
-                        alertUser("해당주소 없음.");
+                        alertUserError("해당주소 없음.");
                     } else {
                         LatLng mar = new LatLng(list.get(0).getLatitude(), list.get(0).getLongitude());
                         CameraUpdate cameraUpdate = CameraUpdate.scrollTo(mar).animate(CameraAnimation.Linear);

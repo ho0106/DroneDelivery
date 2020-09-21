@@ -1,10 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/dialogLayout"
-    android:layout_width="500dp"
-    android:layout_height="wrap_content"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
     android:gravity="center"
     android:orientation="vertical" >
+
+    <TextView
+        android:id="@+id/title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:layout_marginBottom="10dp"
+        android:gravity="center"
+        android:fontFamily="@font/fontstyles"
+        android:textSize="@dimen/title_text_size"
+        android:textColor="@color/colorText"
+        android:textStyle="bold" />
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -13,22 +26,13 @@
         android:orientation="vertical" >
 
         <TextView
-            android:id="@+id/title"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:gravity="center"
-            android:fontFamily="@font/fontstyles"
-            android:text=""
-            android:textSize="20sp" />
-
-        <TextView
             android:id="@+id/message"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:gravity="center"
             android:fontFamily="@font/fontstyles"
-            android:text=""
-            android:textSize="20sp" />
+            android:textSize="@dimen/text_size"
+            android:textColor="@color/colorText" />
 
         <LinearLayout
             android:id="@+id/addressLayout"
@@ -44,9 +48,11 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:layout_marginLeft="5dp"
                     android:fontFamily="@font/fontstyles"
-                    android:text="주소 입력(도로명)"
-                    android:textSize="20sp" />
+                    android:text="주소 입력(도로명) : "
+                    android:textSize="@dimen/text_size"
+                    android:textColor="@color/colorText" />
 
                 <EditText
                     android:id="@+id/addressBox"
@@ -55,7 +61,8 @@
                     android:fontFamily="@font/fontstyles"
                     android:gravity="center"
                     android:text=""
-                    android:textSize="20sp" />
+                    android:textSize="@dimen/text_size"
+                    android:textColor="@color/colorText" />
 
             </LinearLayout>
 
@@ -67,9 +74,11 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:layout_marginLeft="5dp"
                     android:fontFamily="@font/fontstyles"
-                    android:text="나머지 주소 입력"
-                    android:textSize="20sp" />
+                    android:text="나머지 주소 입력 : "
+                    android:textSize="@dimen/text_size"
+                    android:textColor="@color/colorText" />
 
                 <EditText
                     android:id="@+id/detailAddressBox"
@@ -78,35 +87,39 @@
                     android:fontFamily="@font/fontstyles"
                     android:gravity="center"
                     android:text=""
-                    android:textSize="20sp" />
+                    android:textSize="@dimen/text_size"
+                    android:textColor="@color/colorText" />
             </LinearLayout>
-
         </LinearLayout>
     </LinearLayout>
 
     <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="5dp"
+        android:layout_marginBottom="10dp"
         android:orientation="horizontal" >
 
         <Button
             android:id="@+id/btnPositive"
-            style="@style/Widget.AppCompat.Button"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
+            android:layout_marginRight="10dp"
             android:fontFamily="@font/fontstyles"
             android:text="@string/Positive"
-            android:textStyle="bold" />
+            android:textSize="@dimen/text_size"
+            android:textColor="@color/colorText"
+            android:background="@drawable/ic_bottom_button_style" />
 
         <Button
             android:id="@+id/btnNegative"
-            style="@style/Widget.AppCompat.Button"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
+            android:layout_marginLeft="10dp"
             android:fontFamily="@font/fontstyles"
             android:text="@string/Negative"
-            android:textStyle="bold" />
+            android:textSize="@dimen/text_size"
+            android:textColor="@color/colorText"
+            android:background="@drawable/ic_bottom_button_style" />
     </LinearLayout>
 </LinearLayout>
