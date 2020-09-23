@@ -3,24 +3,19 @@ package com.example.dronedelivery;
 import android.content.Context;
 import android.graphics.Color;
 import android.graphics.PointF;
-import android.graphics.SurfaceTexture;
 import android.location.Address;
 import android.location.Geocoder;
 import android.os.Handler;
-import android.os.HandlerThread;
 import android.speech.tts.TextToSpeech;
 import android.support.annotation.NonNull;
 import android.support.annotation.UiThread;
 import android.support.v4.app.FragmentManager;
-import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
-import android.view.Surface;
-import android.view.TextureView;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.AdapterView;
@@ -28,7 +23,6 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
-import android.widget.ListView;
 import android.widget.Spinner;
 import android.widget.TextView;
 
@@ -49,14 +43,11 @@ import com.naver.maps.map.overlay.PolylineOverlay;
 import com.naver.maps.map.util.FusedLocationSource;
 import com.o3dr.android.client.ControlTower;
 import com.o3dr.android.client.Drone;
-import com.o3dr.android.client.apis.solo.SoloCameraApi;
 import com.o3dr.android.client.interfaces.DroneListener;
 import com.o3dr.android.client.interfaces.LinkListener;
 import com.o3dr.android.client.interfaces.TowerListener;
 import com.o3dr.android.client.apis.ControlApi;
 import com.o3dr.android.client.apis.VehicleApi;
-import com.o3dr.android.client.utils.video.DecoderListener;
-import com.o3dr.android.client.utils.video.MediaCodecManager;
 import com.o3dr.services.android.lib.drone.attribute.AttributeEvent;
 import com.o3dr.services.android.lib.drone.attribute.AttributeEventExtra;
 import com.o3dr.services.android.lib.drone.attribute.AttributeType;
@@ -94,10 +85,15 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private FusedLocationSource locationSource;
     boolean mMapLock = true;
 
-    // RecyclerView
-    RecyclerView mRecyclerView;
+    // DroneLogList
+    RecyclerView mDroneRecyclerView;
     DroneLog mDroneLog;
-    ArrayList mData = new ArrayList();
+    ArrayList mDroneDataLog = new ArrayList();
+
+    // OrderLogList
+    RecyclerView mOrderRecyclerView;
+    OrderLog mOrderLog;
+    ArrayList mOrderDataLog = new ArrayList();
 
     // Drone
     private Drone drone;
@@ -110,23 +106,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private Attitude mDroneYaw;
     private Float mYaw;
 
-    // Video
-    private Button startVideoStream;
-    private Button stopVideoStream;
-
-    private MediaCodecManager mediaCodecManager;
-
-    private TextureView videoView;
-
-    private String videoTag = "testvideotag";
-
     private TextToSpeech tts;
 
     // Mission
-    SwipeRefreshLayout mSwipeRefreshLayout;
-    ListView listView;
-
-    Handler mainHandler;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -163,89 +145,31 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         mapFragment.getMapAsync(this);
 
-        // Video //
-        final Button takePic = (Button) findViewById(R.id.take_photo_button);
-        takePic.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                takePhoto();
-            }
-        });
-
-        final Button toggleVideo = (Button) findViewById(R.id.toggle_video_recording);
-        toggleVideo.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                toggleVideoRecording();
-            }
-        });
-
-        videoView = (TextureView) findViewById(R.id.video_content);
-        videoView.setSurfaceTextureListener(new TextureView.SurfaceTextureListener() {
-            @Override
-            public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
-                alertUser("Video display is available.");
-                startVideoStream.setEnabled(true);
-            }
-
-            @Override
-            public void onSurfaceTextureSizeChanged(SurfaceTexture surface, int width, int height) {
-
-            }
-
-            @Override
-            public boolean onSurfaceTextureDestroyed(SurfaceTexture surface) {
-                startVideoStream.setEnabled(false);
-                return true;
-            }
-
-            @Override
-            public void onSurfaceTextureUpdated(SurfaceTexture surface) {
-
-            }
-        });
-
-        startVideoStream = (Button) findViewById(R.id.start_video_stream);
-        startVideoStream.setEnabled(false);
-        startVideoStream.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                alertUser("Starting video stream.");
-                startVideoStream(new Surface(videoView.getSurfaceTexture()));
-            }
-        });
-
-        stopVideoStream = (Button) findViewById(R.id.stop_video_stream);
-        stopVideoStream.setEnabled(false);
-        stopVideoStream.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                alertUser("Stopping video stream.");
-                stopVideoStream();
-            }
-        });
-
-        // Initialize media codec manager to decode video stream packets.
-        HandlerThread mediaCodecHandlerThread = new HandlerThread("MediaCodecHandlerThread");
-        mediaCodecHandlerThread.start();
-        Handler mediaCodecHandler = new Handler(mediaCodecHandlerThread.getLooper());
-        mediaCodecManager = new MediaCodecManager(mediaCodecHandler);
-
-        mainHandler = new Handler(getApplicationContext().getMainLooper());
-
         // GCS 위치표시 //
         locationSource = new FusedLocationSource(this, LOCATION_PERMISSION_REQUEST_CODE);
 
-        // RecyclerView //
-        mRecyclerView = findViewById(R.id.droneLog);
-        LinearLayoutManager mLinerLayoutManager = new LinearLayoutManager(this);
+        // Drone Log //
+        mDroneRecyclerView = findViewById(R.id.droneLog);
+        LinearLayoutManager mDroneLinerLayoutManager = new LinearLayoutManager(this);
 
-        mLinerLayoutManager.setReverseLayout(true);
-        mLinerLayoutManager.setStackFromEnd(true);
-        mRecyclerView.setLayoutManager(mLinerLayoutManager);
-        mData = new ArrayList<Integer>(10);
-        mDroneLog = new DroneLog(mData);
-        mRecyclerView.setAdapter(mDroneLog);
+        mDroneLinerLayoutManager.setReverseLayout(true);
+        mDroneLinerLayoutManager.setStackFromEnd(true);
+        mDroneRecyclerView.setLayoutManager(mDroneLinerLayoutManager);
+        mDroneDataLog = new ArrayList<Integer>(10);
+        mDroneLog = new DroneLog(mDroneDataLog);
+        mDroneRecyclerView.setAdapter(mDroneLog);
+
+        // Order Log //
+        View dialogView = getLayoutInflater().inflate(R.layout.custom_dialog, null);
+        mOrderRecyclerView = dialogView.findViewById(R.id.orderLog);
+        LinearLayoutManager mOrderLinerLayoutManager = new LinearLayoutManager(this);
+
+        mOrderLinerLayoutManager.setReverseLayout(true);
+        mOrderLinerLayoutManager.setStackFromEnd(true);
+        mOrderRecyclerView.setLayoutManager(mOrderLinerLayoutManager);
+        mOrderDataLog = new ArrayList<Integer>(10);
+        mOrderLog = new OrderLog(mOrderDataLog);
+        mOrderRecyclerView.setAdapter(mOrderLog);
 
         // Drone start
         final Context context = getApplicationContext();
@@ -318,18 +242,26 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     // Drone Log update //
+
     protected void alertUser(String message) {
         // 기본 로그 //
-        mData.add(" ☆ " + message);
-        mRecyclerView.smoothScrollToPosition(mData.size()-1);
+        mDroneDataLog.add(" ☆ " + message);
+        mDroneRecyclerView.smoothScrollToPosition(mDroneDataLog.size()-1);
         mDroneLog.notifyDataSetChanged();
     }
 
     protected void alertUserError(String message) {
         // 오류 로그 //
-        mData.add(" ※ " + message);
-        mRecyclerView.smoothScrollToPosition(mData.size()-1);
+        mDroneDataLog.add(" ※ " + message);
+        mDroneRecyclerView.smoothScrollToPosition(mDroneDataLog.size()-1);
         mDroneLog.notifyDataSetChanged();
+    }
+
+    protected void orderListLog(String message) {
+        // 주문 리스트 //
+        mOrderDataLog.add(message);
+        mOrderRecyclerView.smoothScrollToPosition(mOrderDataLog.size()-1);
+        mOrderLog.notifyDataSetChanged();
     }
 
     // Drone Start //
@@ -760,27 +692,28 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     public void onBtnCheckOrderTap(View view) {
-        View dialogView = getLayoutInflater().inflate(R.layout.order_list, null);
+        View dialogView = getLayoutInflater().inflate(R.layout.custom_dialog, null);
         AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
         builder.setView(dialogView);
         final AlertDialog alertDialog = builder.create();
-//
-//        Button btnPositive = dialogView.findViewById(R.id.btnPositive);
-//        btnPositive.setOnClickListener(new View.OnClickListener() {
-//            @Override
-//            public void onClick(View view) {
-//
-//                alertDialog.dismiss();
-//            }
-//        });
-//        Button btnNegative = dialogView.findViewById(R.id.btnNegative);
-//        btnNegative.setOnClickListener(new View.OnClickListener() {
-//            @Override
-//            public void onClick(View v) {
-//
-//                alertDialog.dismiss();
-//            }
-//        });
+
+
+        Button btnPositive = dialogView.findViewById(R.id.btnPositive);
+        btnPositive.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+
+                orderListLog("test");
+            }
+        });
+        Button btnNegative = dialogView.findViewById(R.id.btnNegative);
+        btnNegative.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+                alertDialog.dismiss();
+            }
+        });
         alertDialog.show();
     }
 
@@ -953,110 +886,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         this.modeSelector.setSelection(arrayAdapter.getPosition(vehicleMode));
     }
 
-    // Mission //
+    // Delivery //
 
-    // Video //
-
-    private void takePhoto() {
-        SoloCameraApi.getApi(drone).takePhoto(new AbstractCommandListener() {
-            @Override
-            public void onSuccess() {
-                alertUser("Photo taken.");
-            }
-
-            @Override
-            public void onError(int executionError) {
-                alertUserError("Error while trying to take the photo: " + executionError);
-            }
-
-            @Override
-            public void onTimeout() {
-                alertUser("Timeout while trying to take the photo.");
-            }
-        });
-    }
-
-    private void toggleVideoRecording() {
-        SoloCameraApi.getApi(drone).toggleVideoRecording(new AbstractCommandListener() {
-            @Override
-            public void onSuccess() {
-                alertUser("Video recording toggled.");
-            }
-
-            @Override
-            public void onError(int executionError) {
-                alertUserError("Error while trying to toggle video recording: " + executionError);
-            }
-
-            @Override
-            public void onTimeout() {
-                alertUser("Timeout while trying to toggle video recording.");
-            }
-        });
-    }
-
-    private void startVideoStream(Surface videoSurface) {
-        SoloCameraApi.getApi(drone).startVideoStream(videoSurface, videoTag, true, new AbstractCommandListener() {
-            @Override
-            public void onSuccess() {
-                alertUser("Successfully started the video stream. ");
-
-                if (stopVideoStream != null)
-                    stopVideoStream.setEnabled(true);
-
-                if (startVideoStream != null)
-                    startVideoStream.setEnabled(false);
-            }
-
-            @Override
-            public void onError(int executionError) {
-                alertUserError("Error while starting the video stream: " + executionError);
-            }
-
-            @Override
-            public void onTimeout() {
-                alertUser("Timed out while attempting to start the video stream.");
-            }
-        });
-    }
-
-    DecoderListener decoderListener = new DecoderListener() {
-        @Override
-        public void onDecodingStarted() {
-            alertUser("MediaCodecManager: video decoding started...");
-        }
-
-        @Override
-        public void onDecodingError() {
-            alertUserError("MediaCodecManager: video decoding error...");
-        }
-
-        @Override
-        public void onDecodingEnded() {
-            alertUser("MediaCodecManager: video decoding ended...");
-        }
-    };
-
-    private void stopVideoStream() {
-        SoloCameraApi.getApi(drone).stopVideoStream(videoTag, new AbstractCommandListener() {
-            @Override
-            public void onSuccess() {
-                if (stopVideoStream != null)
-                    stopVideoStream.setEnabled(false);
-
-                if (startVideoStream != null)
-                    startVideoStream.setEnabled(true);
-            }
-
-            @Override
-            public void onError(int executionError) {
-            }
-
-            @Override
-            public void onTimeout() {
-            }
-        });
-    }
 
     @Override
     public void onLinkStateUpdated(@NonNull LinkConnectionStatus connectionStatus) {
@@ -1067,7 +898,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 if (extras != null) {
                     msg = extras.getString(LinkConnectionStatus.EXTRA_ERROR_MSG);
                 }
-                alertUser("Connection Failed:" + msg);
+                alertUserError("Connection Failed:" + msg);
                 break;
         }
     }

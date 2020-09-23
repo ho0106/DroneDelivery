@@ -10,54 +10,54 @@ import android.widget.TextView;
 
 import java.util.ArrayList;
 
-public class DroneLog extends RecyclerView.Adapter<DroneLog.ViewHolder> {
+public class DroneLog extends RecyclerView.Adapter<DroneLog.DroneLogViewHolder> {
 
-    private ArrayList<String> mData;
+    private ArrayList<String> mDroneLog;
 
     // 아이템 뷰를 저장하는 뷰홀더 클래스.
-    public class ViewHolder extends RecyclerView.ViewHolder {
+    public class DroneLogViewHolder extends RecyclerView.ViewHolder {
 
-        protected TextView textView1 ;
+        protected TextView droneTextView;
 
-        ViewHolder(View itemView) {
+        DroneLogViewHolder(View itemView) {
             super(itemView) ;
 
             // 뷰 객체에 대한 참조. (hold strong reference)
-            this.textView1 = (TextView) itemView.findViewById(R.id.stateLog);
+            this.droneTextView = (TextView) itemView.findViewById(R.id.stateLog);
         }
     }
 
     // 생성자에서 데이터 리스트 객체를 전달받음.
     public DroneLog(ArrayList<String> list) {
-        this.mData = list ;
+        this.mDroneLog = list ;
     }
 
     // onCreateViewHolder() - 아이템 뷰를 위한 뷰홀더 객체 생성하여 리턴.
     @Override
-    public DroneLog.ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.recyclerview_items,parent,false);
-        ViewHolder viewHolder = new ViewHolder(view);
-        return viewHolder;
+    public DroneLog.DroneLogViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+        View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.drone_recyclerview_items,parent,false);
+        DroneLogViewHolder droneLogViewHolder = new DroneLogViewHolder(view);
+        return droneLogViewHolder;
     }
 
     // onBindViewHolder() - position에 해당하는 데이터를 뷰홀더의 아이템뷰에 표시.
     @Override
-    public void onBindViewHolder(@NonNull DroneLog.ViewHolder viewholder, int position) {
-        viewholder.textView1.setText(mData.get(position));
+    public void onBindViewHolder(@NonNull DroneLog.DroneLogViewHolder viewholder, int position) {
+        viewholder.droneTextView.setText(mDroneLog.get(position));
 
-        String text = mData.get(position);
+        String text = mDroneLog.get(position);
 
         if (text.contains(" ※ ")) {
-            viewholder.textView1.setTextColor(Color.RED);
+            viewholder.droneTextView.setTextColor(Color.RED);
         } else {
-            viewholder.textView1.setTextColor(Color.WHITE);
+            viewholder.droneTextView.setTextColor(Color.WHITE);
         }
-        viewholder.textView1.setText(text);
+        viewholder.droneTextView.setText(text);
     }
 
     // getItemCount() - 전체 데이터 갯수 리턴.
     @Override
     public int getItemCount() {
-        return  mData.size();
+        return  mDroneLog.size();
     }
 }
