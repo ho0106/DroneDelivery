@@ -3,6 +3,7 @@ package com.example.dronedelivery;
 import android.content.Context;
 import android.graphics.Color;
 import android.graphics.PointF;
+import android.graphics.drawable.ColorDrawable;
 import android.location.Address;
 import android.location.Geocoder;
 import android.os.Handler;
@@ -159,7 +160,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         mDroneLog = new DroneLog(mDroneDataLog);
         mDroneRecyclerView.setAdapter(mDroneLog);
 
-        // Order Log //
+        // Order Log // 주문목록 저장 진행중
         View dialogView = getLayoutInflater().inflate(R.layout.custom_dialog, null);
         mOrderRecyclerView = dialogView.findViewById(R.id.orderLog);
         LinearLayoutManager mOrderLinerLayoutManager = new LinearLayoutManager(this);
@@ -464,6 +465,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     alertDialog.dismiss();
                 }
             });
+            alertDialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
             alertDialog.show();
         } else if (!vehicleState.isConnected()) {
             alertUserError("드론을 먼저 연결해주세요.");
@@ -484,6 +486,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     alertDialog.dismiss();
                 }
             });
+            alertDialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
             alertDialog.show();
         }
     }
@@ -629,8 +632,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         final Button SetOrderButton = findViewById(R.id.btnSetOrder);
         final Button CheckOrderButton = findViewById(R.id.btnCheckOrder);
         TextView orderValue = findViewById(R.id.btnOrder);
-        View dialogView = getLayoutInflater().inflate(R.layout.custom_dialog, null);
+
         AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+        View dialogView = getLayoutInflater().inflate(R.layout.custom_dialog, null);
         builder.setView(dialogView);
 
         final AlertDialog alertDialog = builder.create();
@@ -688,6 +692,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 alertDialog.dismiss();
             }
         });
+        alertDialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
         alertDialog.show();
     }
 
@@ -697,6 +702,14 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         builder.setView(dialogView);
         final AlertDialog alertDialog = builder.create();
 
+        LinearLayout addressLayout = dialogView.findViewById(R.id.addressLayout);
+        addressLayout.setVisibility(View.GONE);
+
+        TextView message = dialogView.findViewById(R.id.message);
+        message.setVisibility(View.GONE);
+
+        TextView title = dialogView.findViewById(R.id.title);
+        title.setText("주문 목록");
 
         Button btnPositive = dialogView.findViewById(R.id.btnPositive);
         btnPositive.setOnClickListener(new View.OnClickListener() {
@@ -714,6 +727,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 alertDialog.dismiss();
             }
         });
+        alertDialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
         alertDialog.show();
     }
 
