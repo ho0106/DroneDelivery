@@ -26,6 +26,7 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.Spinner;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.naver.maps.geometry.LatLng;
 import com.naver.maps.map.CameraAnimation;
@@ -95,6 +96,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     RecyclerView mOrderRecyclerView;
     OrderLog mOrderLog;
     ArrayList mOrderDataLog = new ArrayList();
+    int i = 1;
 
     // Drone
     private Drone drone;
@@ -160,9 +162,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         mDroneLog = new DroneLog(mDroneDataLog);
         mDroneRecyclerView.setAdapter(mDroneLog);
 
-        // Order Log // 주문목록 저장 진행중
-        View dialogView = getLayoutInflater().inflate(R.layout.custom_dialog, null);
-        mOrderRecyclerView = dialogView.findViewById(R.id.orderLog);
+        // Order Log //
+        mOrderRecyclerView = findViewById(R.id.orderLog);
         LinearLayoutManager mOrderLinerLayoutManager = new LinearLayoutManager(this);
 
         mOrderLinerLayoutManager.setReverseLayout(true);
@@ -171,6 +172,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         mOrderDataLog = new ArrayList<Integer>(10);
         mOrderLog = new OrderLog(mOrderDataLog);
         mOrderRecyclerView.setAdapter(mOrderLog);
+        delOrder();
 
         // Drone start
         final Context context = getApplicationContext();
@@ -260,7 +262,10 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     protected void orderListLog(String message) {
         // 주문 리스트 //
-        mOrderDataLog.add(message);
+        if (i <100) {
+            mOrderDataLog.add(String.format(" %d - " + message, i));
+            i++;
+        }
         mOrderRecyclerView.smoothScrollToPosition(mOrderDataLog.size()-1);
         mOrderLog.notifyDataSetChanged();
     }
@@ -617,20 +622,16 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     public void onBtnOrderTap(View view) {
         final Button SetOrderButton = findViewById(R.id.btnSetOrder);
-        final Button CheckOrderButton = findViewById(R.id.btnCheckOrder);
 
         if (SetOrderButton.getVisibility() == View.GONE) {
             SetOrderButton.setVisibility(View.VISIBLE);
-            CheckOrderButton.setVisibility(View.VISIBLE);
         } else {
             SetOrderButton.setVisibility(View.GONE);
-            CheckOrderButton.setVisibility(View.GONE);
         }
     }
 
     public void onBtnSetOrderTap(View view) {
         final Button SetOrderButton = findViewById(R.id.btnSetOrder);
-        final Button CheckOrderButton = findViewById(R.id.btnCheckOrder);
         TextView orderValue = findViewById(R.id.btnOrder);
 
         AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
@@ -644,7 +645,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             case R.id.btnSetOrder:
                 orderValue.setText("주소 설정");
                 SetOrderButton.setVisibility(View.GONE);
-                CheckOrderButton.setVisibility(View.GONE);
                 break;
         }
 
@@ -654,14 +654,16 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         TextView title = dialogView.findViewById(R.id.title);
         title.setText("주소를 입력해 주세요");
 
-        final EditText editText = dialogView.findViewById(R.id.addressBox);
+        final EditText addressText = dialogView.findViewById(R.id.addressBox);
+        final EditText detailAddressText = dialogView.findViewById(R.id.detailAddressBox);
         Button btnPositive = dialogView.findViewById(R.id.btnPositive);
         btnPositive.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 List<Address> list = null;
 
-                String address = editText.getText().toString();
+                String address = addressText.getText().toString();
+                String detailAddress = detailAddressText.getText().toString();
                 try {
                     list = geocoder.getFromLocationName(address,10);
                 } catch (IOException e) {
@@ -678,45 +680,10 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                         marker.setPosition(mar);
                         marker.setMap(mNaverMap);
                         mNaverMap.moveCamera(cameraUpdate);
-                        alertUser("배달주소 : " + address);
+                        orderListLog("배달주소 : " + address + " " + detailAddress);
                     }
                 }
                 alertDialog.dismiss();
-            }
-        });
-        Button btnNegative = dialogView.findViewById(R.id.btnNegative);
-        btnNegative.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-
-                alertDialog.dismiss();
-            }
-        });
-        alertDialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-        alertDialog.show();
-    }
-
-    public void onBtnCheckOrderTap(View view) {
-        View dialogView = getLayoutInflater().inflate(R.layout.custom_dialog, null);
-        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
-        builder.setView(dialogView);
-        final AlertDialog alertDialog = builder.create();
-
-        LinearLayout addressLayout = dialogView.findViewById(R.id.addressLayout);
-        addressLayout.setVisibility(View.GONE);
-
-        TextView message = dialogView.findViewById(R.id.message);
-        message.setVisibility(View.GONE);
-
-        TextView title = dialogView.findViewById(R.id.title);
-        title.setText("주문 목록");
-
-        Button btnPositive = dialogView.findViewById(R.id.btnPositive);
-        btnPositive.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-
-                orderListLog("test");
             }
         });
         Button btnNegative = dialogView.findViewById(R.id.btnNegative);
@@ -902,7 +869,14 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     // Delivery //
 
-
+    public void delOrder() {
+        mOrderLog.setOnItemLongClickListener(new OrderLog.OnItemLongClickListener() {
+            @Override
+            public void onItemLongClick(View v, int pos) {
+                Toast.makeText(getApplicationContext(), "삭제하시겠습니까?", Toast.LENGTH_LONG).show();
+            }
+        });
+    }
     @Override
     public void onLinkStateUpdated(@NonNull LinkConnectionStatus connectionStatus) {
         switch(connectionStatus.getStatusCode()){

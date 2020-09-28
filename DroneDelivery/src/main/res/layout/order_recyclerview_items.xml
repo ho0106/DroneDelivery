@@ -11,7 +11,7 @@
         android:layout_height="match_parent"
         android:layout_marginBottom="10dp"
         android:background="@drawable/recyclerview_style"
-        android:textColor="#000000"
+        android:textColor="#ffffff"
         android:textSize="@dimen/text_size"
         android:fontFamily="@font/fontstyles"
         android:paddingTop="5dp"
