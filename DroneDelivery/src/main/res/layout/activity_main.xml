@@ -7,12 +7,14 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity">
 
+    <!--네이버 지도-->
     <fragment
         android:id="@+id/map"
         android:name="com.naver.maps.map.MapFragment"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
+    <!--드론 로그 뷰-->
     <android.support.v7.widget.RecyclerView
         android:id="@+id/droneLog"
         android:layout_width="450dp"
@@ -22,6 +24,7 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintLeft_toLeftOf="parent" />
 
+    <!--주문 로그 뷰-->
     <android.support.v7.widget.RecyclerView
         android:id="@+id/orderLog"
         android:layout_width="450dp"
@@ -31,6 +34,7 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintLeft_toLeftOf="parent" />
 
+    <!--드론 상태 뷰-->
     <android.support.v7.widget.CardView
         android:id="@+id/view_state"
         android:layout_width="match_parent"
@@ -216,6 +220,7 @@
         </RelativeLayout>
     </android.support.v7.widget.CardView>
 
+    <!--드론 기능 버튼-->
     <LinearLayout
         android:id="@+id/layoutARM"
         android:layout_width="wrap_content"
@@ -227,9 +232,21 @@
         app:layout_constraintBottom_toBottomOf="parent">
 
         <Button
+            android:id="@+id/btnDeliveryStart"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/ic_bottom_button_style"
+            android:text="주소 전송"
+            android:textSize="20dp"
+            android:textColor="#ffffff"
+            android:fontFamily="@font/fontstyles"
+            android:onClick="onArmButtonTap" />
+
+        <Button
             android:id="@+id/btnArmTakeOff"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginLeft="10dp"
             android:background="@drawable/ic_bottom_button_style"
             android:text="@string/vehicle_arm"
             android:textSize="20dp"
@@ -262,6 +279,7 @@
             android:onClick="onMapMoveButtonTap" />
     </LinearLayout>
 
+    <!--주문 관리 버튼-->
     <LinearLayout
         android:id="@+id/layoutDroneAttribute"
         android:layout_width="wrap_content"

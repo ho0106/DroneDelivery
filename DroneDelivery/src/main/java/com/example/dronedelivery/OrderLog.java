@@ -94,6 +94,6 @@ public class OrderLog extends RecyclerView.Adapter<OrderLog.OrderLogViewHolder> 
     // getItemCount() - 전체 데이터 갯수 리턴.
     @Override
     public int getItemCount() {
-        return  mOrderLog.size();
+        return  (null != mOrderLog ? mOrderLog.size() : 0);
     }
 }

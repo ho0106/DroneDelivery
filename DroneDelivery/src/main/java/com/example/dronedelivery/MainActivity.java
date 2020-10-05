@@ -38,7 +38,9 @@ import com.naver.maps.map.NaverMap;
 import com.naver.maps.map.NaverMapSdk;
 import com.naver.maps.map.OnMapReadyCallback;
 import com.naver.maps.map.UiSettings;
+import com.naver.maps.map.overlay.InfoWindow;
 import com.naver.maps.map.overlay.Marker;
+import com.naver.maps.map.overlay.Overlay;
 import com.naver.maps.map.overlay.OverlayImage;
 import com.naver.maps.map.overlay.PolylineOverlay;
 
@@ -80,7 +82,12 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     // NaverMap
     NaverMap mNaverMap;
-    private Marker marker = new Marker();
+    private List<Marker> orderMarker = new ArrayList<>();
+    private List<InfoWindow> infoWindow = new ArrayList<>();
+    InfoWindow orderInfoWindow = new InfoWindow();
+    private int orderMarkerCount = 0;
+    private int infoWindowCount = 0;
+    private Marker droneMarker = new Marker();
     private List<LatLng> poly = new ArrayList<>();
     private PolylineOverlay polylineOverlay = new PolylineOverlay();
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1000;
@@ -117,6 +124,14 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        orderInfoWindow.setAdapter(new InfoWindow.DefaultTextAdapter(this) {
+            @NonNull
+            @Override
+            public CharSequence getText(@NonNull InfoWindow infoWindow) {
+                return (CharSequence) infoWindow.getMarker().getTag();
+            }
+        });
 
         // Full screen //
         int uiOptions = getWindow().getDecorView().getSystemUiVisibility();
@@ -172,6 +187,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         mOrderDataLog = new ArrayList<Integer>(10);
         mOrderLog = new OrderLog(mOrderDataLog);
         mOrderRecyclerView.setAdapter(mOrderLog);
+        checkOrder();
         delOrder();
 
         // Drone start
@@ -223,7 +239,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         this.mNaverMap = naverMap;
         UiSettings uiSettings = naverMap.getUiSettings();
         alertUser("맵 로딩 완료");
-        tts.speak("맵 로딩 완료", TextToSpeech.QUEUE_FLUSH, null);
 
         // 최초 위치, 줌 설정 //
         CameraPosition cameraPosition = new CameraPosition(
@@ -241,7 +256,29 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         naverMap.setLocationSource(locationSource);
         naverMap.setLocationTrackingMode(LocationTrackingMode.NoFollow);
 
+        // 지도를 클릭하면 정보 창을 닫음 //
+        naverMap.setOnMapClickListener(new NaverMap.OnMapClickListener() {
+            @Override
+            public void onMapClick(@NonNull PointF pointF, @NonNull LatLng latLng) {
+                infoWindow.get(infoWindowCount).close();
+            }
+        });
 
+        Overlay.OnClickListener listener = new Overlay.OnClickListener() {
+            @Override
+            public boolean onClick(@NonNull Overlay overlay) {
+                Marker marker = (Marker)overlay;
+
+                if (marker.getInfoWindow() == null) {
+                    infoWindow.get(infoWindowCount).open(marker);
+                } else {
+                    infoWindow.get(infoWindowCount).close();
+                }
+                return true;
+            }
+        };
+
+        //marker.setOnClickListener(listener);
     }
 
     // Drone Log update //
@@ -268,6 +305,10 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
         mOrderRecyclerView.smoothScrollToPosition(mOrderDataLog.size()-1);
         mOrderLog.notifyDataSetChanged();
+    }
+
+    protected void ttsPrint(String message) {
+        tts.speak(message, TextToSpeech.QUEUE_FLUSH, null);
     }
 
     // Drone Start //
@@ -421,11 +462,13 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             @Override
             public void onSuccess() {
                 alertUser(String.format("비행 모드 변경 : %s", vehicleMode.getLabel()));
+                ttsPrint(String.format("비행 모드 변경 : %s", vehicleMode.getLabel()));
             }
 
             @Override
             public void onError(int executionError) {
                 alertUserError("비행 모드 변경 실패 : " + executionError);
+                ttsPrint("비행 모드 변경 실패");
             }
 
             @Override
@@ -677,10 +720,20 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     } else {
                         LatLng mar = new LatLng(list.get(0).getLatitude(), list.get(0).getLongitude());
                         CameraUpdate cameraUpdate = CameraUpdate.scrollTo(mar).animate(CameraAnimation.Linear);
+                        Marker marker = new Marker();
+
                         marker.setPosition(mar);
                         marker.setMap(mNaverMap);
+                        marker.setTag(address);
+                        orderMarker.add(marker);
                         mNaverMap.moveCamera(cameraUpdate);
                         orderListLog("배달주소 : " + address + " " + detailAddress);
+                        ttsPrint("배달주소 : " + address + " " + detailAddress);
+
+                        orderInfoWindow.open(orderMarker.get(orderMarkerCount));
+                        infoWindow.add(orderInfoWindow);
+                        orderMarkerCount++;
+                        infoWindowCount++;
                     }
                 }
                 alertDialog.dismiss();
@@ -690,7 +743,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         btnNegative.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-
                 alertDialog.dismiss();
             }
         });
@@ -707,14 +759,14 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         CameraUpdate cameraUpdate = CameraUpdate.scrollTo(droneLocation).animate(CameraAnimation.Linear);
 
         if (mMapLock == true) {
-            marker.setPosition(droneLocation);
-            marker.setIcon(OverlayImage.fromResource(R.drawable.location_overlay_icon));
-            marker.setFlat(true);
-            marker.setWidth(100);
-            marker.setHeight(400);
-            marker.setMap(mNaverMap);
-            marker.setAnchor(new PointF(0.5f, 0.85f));
-            marker.setAngle(mYaw);
+            droneMarker.setPosition(droneLocation);
+            droneMarker.setIcon(OverlayImage.fromResource(R.drawable.location_overlay_icon));
+            droneMarker.setFlat(true);
+            droneMarker.setWidth(100);
+            droneMarker.setHeight(400);
+            droneMarker.setMap(mNaverMap);
+            droneMarker.setAnchor(new PointF(0.5f, 0.85f));
+            droneMarker.setAngle(mYaw);
             mNaverMap.moveCamera(cameraUpdate);
 
             poly.add(0, droneLocation);
@@ -727,14 +779,14 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             polylineOverlay.setColor(Color.RED);
             polylineOverlay.setMap(mNaverMap);
         } else {
-            marker.setPosition(droneLocation);
-            marker.setIcon(OverlayImage.fromResource(R.drawable.location_overlay_icon));
-            marker.setFlat(true);
-            marker.setWidth(100);
-            marker.setHeight(400);
-            marker.setMap(mNaverMap);
-            marker.setAnchor(new PointF(0.5f, 0.85f));
-            marker.setAngle(mYaw);
+            droneMarker.setPosition(droneLocation);
+            droneMarker.setIcon(OverlayImage.fromResource(R.drawable.location_overlay_icon));
+            droneMarker.setFlat(true);
+            droneMarker.setWidth(100);
+            droneMarker.setHeight(400);
+            droneMarker.setMap(mNaverMap);
+            droneMarker.setAnchor(new PointF(0.5f, 0.85f));
+            droneMarker.setAngle(mYaw);
 
             poly.add(0, droneLocation);
             polylineOverlay.setCoords(poly);
@@ -797,8 +849,14 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         TextView gpsTextView = findViewById(R.id.gpsValueTextView);
         gpsTextView.setText(String.format("0")); // Clear GPS count
 
-        marker.setMap(null); // Clear drone marker
+        droneMarker.setMap(null); // Clear drone marker
         polylineOverlay.setMap(null); // Clear path
+        if (orderMarker.size() != 0) {
+            for (int i = 0; i < orderMarker.size(); i++) {
+                orderMarker.get(i).setMap(null);
+            }
+        }
+        orderMarker.clear();
     }
 
     protected void updateVoltage() { // Drone battery value
@@ -869,11 +927,81 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     // Delivery //
 
+    public void checkOrder() {
+        mOrderLog.setOnItemClickListener(new OrderLog.OnItemClickListener() {
+            @Override
+            public void onItemClick(View v, int pos) {
+                AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+                View dialogView = getLayoutInflater().inflate(R.layout.custom_dialog, null);
+                builder.setView(dialogView);
+
+                final AlertDialog alertDialog = builder.create();
+
+                LinearLayout addressLayout = dialogView.findViewById(R.id.addressLayout);
+                TextView title = dialogView.findViewById(R.id.title);
+                TextView message = dialogView.findViewById(R.id.message);
+
+                addressLayout.setVisibility(View.GONE);
+                title.setText("주문 상세 정보");
+                message.setVisibility(View.GONE);
+
+                Button btnPositive = dialogView.findViewById(R.id.btnPositive);
+                btnPositive.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        alertDialog.dismiss();
+                    }
+                });
+                Button btnNegative = dialogView.findViewById(R.id.btnNegative);
+                btnNegative.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        alertDialog.dismiss();
+                    }
+                });
+                alertDialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+                alertDialog.show();
+            }
+        });
+    }
+
     public void delOrder() {
         mOrderLog.setOnItemLongClickListener(new OrderLog.OnItemLongClickListener() {
             @Override
-            public void onItemLongClick(View v, int pos) {
-                Toast.makeText(getApplicationContext(), "삭제하시겠습니까?", Toast.LENGTH_LONG).show();
+            public void onItemLongClick(View v, final int pos) {
+                AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+                View dialogView = getLayoutInflater().inflate(R.layout.custom_dialog, null);
+                builder.setView(dialogView);
+
+                final AlertDialog alertDialog = builder.create();
+
+                LinearLayout addressLayout = dialogView.findViewById(R.id.addressLayout);
+                TextView title = dialogView.findViewById(R.id.title);
+                TextView message = dialogView.findViewById(R.id.message);
+
+                addressLayout.setVisibility(View.GONE);
+                title.setText("삭제하시겠습니까?");
+                message.setText("확인을 누르시면 삭제됩니다.");
+
+                Button btnPositive = dialogView.findViewById(R.id.btnPositive);
+                btnPositive.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        mOrderDataLog.remove(pos);
+                        mOrderLog.notifyDataSetChanged();
+                        //marker.setMap(null);
+                        alertDialog.dismiss();
+                    }
+                });
+                Button btnNegative = dialogView.findViewById(R.id.btnNegative);
+                btnNegative.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        alertDialog.dismiss();
+                    }
+                });
+                alertDialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+                alertDialog.show();
             }
         });
     }
