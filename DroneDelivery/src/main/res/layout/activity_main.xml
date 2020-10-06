@@ -227,7 +227,7 @@
         android:layout_height="wrap_content"
         android:layout_marginRight="15dp"
         android:layout_marginBottom="15dp"
-        android:visibility="invisible"
+        android:visibility="visible"
         app:layout_constraintRight_toRightOf="parent"
         app:layout_constraintBottom_toBottomOf="parent">
 
@@ -336,37 +336,16 @@
                 android:visibility="gone" />
         </LinearLayout>
 
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:orientation="vertical">
-
-            <Button
-                android:id="@+id/btnOrder"
-                android:layout_width="70dp"
-                android:layout_height="70dp"
-                android:layout_marginBottom="5dp"
-                android:background="@drawable/ic_top_button_styles"
-                android:text="@string/view_order"
-                android:textSize="15dp"
-                android:textColor="#ffffff"
-                android:fontFamily="@font/fontstyles"
-                android:onClick="onBtnOrderTap" />
-
-            <Button
-                android:id="@+id/btnSetOrder"
-                android:layout_width="70dp"
-                android:layout_height="70dp"
-                android:layout_marginBottom="5dp"
-                android:background="@drawable/ic_top_button_styles"
-                android:backgroundTint="#CB7CB5DB"
-                android:text="배달지점\n설정"
-                android:textSize="15dp"
-                android:visibility="gone"
-                android:textColor="#ffffff"
-                android:fontFamily="@font/fontstyles"
-                android:onClick="onBtnSetOrderTap" />
-
-        </LinearLayout>
+        <Button
+            android:id="@+id/btnOrder"
+            android:layout_width="70dp"
+            android:layout_height="70dp"
+            android:layout_marginBottom="5dp"
+            android:background="@drawable/ic_top_button_styles"
+            android:text="@string/view_order"
+            android:textSize="15dp"
+            android:textColor="#ffffff"
+            android:fontFamily="@font/fontstyles"
+            android:onClick="onBtnSetOrderTap" />
     </LinearLayout>
 </android.support.constraint.ConstraintLayout>

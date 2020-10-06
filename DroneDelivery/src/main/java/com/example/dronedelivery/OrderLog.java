@@ -31,20 +31,6 @@ public class OrderLog extends RecyclerView.Adapter<OrderLog.OrderLogViewHolder> 
                 }
             });
 
-            itemView.setOnLongClickListener(new View.OnLongClickListener()
-            {
-                @Override
-                public boolean onLongClick(View v)
-                {
-                    int pos = getAdapterPosition();
-                    if (pos != RecyclerView.NO_POSITION)
-                    {
-                        mLongListener.onItemLongClick(v, pos);
-                    }
-                    return true;
-                }
-            });
-
             // 뷰 객체에 대한 참조. (hold strong reference)
             this.orderTextView = (TextView) itemView.findViewById(R.id.orderList);
         }
@@ -54,19 +40,10 @@ public class OrderLog extends RecyclerView.Adapter<OrderLog.OrderLogViewHolder> 
         void onItemClick(View v, int pos);
     }
 
-    public interface OnItemLongClickListener {
-        void onItemLongClick(View v, int pos);
-    }
-
     private OnItemClickListener mListener = null;
-    private OnItemLongClickListener mLongListener = null;
 
     public void setOnItemClickListener(OnItemClickListener listener) {
         this.mListener = listener;
-    }
-
-    public void setOnItemLongClickListener(OnItemLongClickListener listener) {
-        this.mLongListener = listener;
     }
 
     // 생성자에서 데이터 리스트 객체를 전달받음.

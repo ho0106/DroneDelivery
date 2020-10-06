@@ -16,6 +16,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.support.v7.widget.helper.ItemTouchHelper;
 import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
@@ -83,10 +84,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     // NaverMap
     NaverMap mNaverMap;
     private List<Marker> orderMarker = new ArrayList<>();
-    private List<InfoWindow> infoWindow = new ArrayList<>();
-    InfoWindow orderInfoWindow = new InfoWindow();
     private int orderMarkerCount = 0;
-    private int infoWindowCount = 0;
     private Marker droneMarker = new Marker();
     private List<LatLng> poly = new ArrayList<>();
     private PolylineOverlay polylineOverlay = new PolylineOverlay();
@@ -103,7 +101,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     RecyclerView mOrderRecyclerView;
     OrderLog mOrderLog;
     ArrayList mOrderDataLog = new ArrayList();
-    int i = 1;
 
     // Drone
     private Drone drone;
@@ -124,14 +121,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-        orderInfoWindow.setAdapter(new InfoWindow.DefaultTextAdapter(this) {
-            @NonNull
-            @Override
-            public CharSequence getText(@NonNull InfoWindow infoWindow) {
-                return (CharSequence) infoWindow.getMarker().getTag();
-            }
-        });
 
         // Full screen //
         int uiOptions = getWindow().getDecorView().getSystemUiVisibility();
@@ -190,12 +179,14 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         checkOrder();
         delOrder();
 
-        // Drone start
+
+
+        // Drone start //
         final Context context = getApplicationContext();
         this.controlTower = new ControlTower(context);
         this.drone = new Drone(context);
 
-        // Drone Mode Spinner
+        // Drone Mode Spinner //
         this.modeSelector = (Spinner) findViewById(R.id.modeSelect);
         this.modeSelector.setOnItemSelectedListener(new Spinner.OnItemSelectedListener() {
             @Override
@@ -255,30 +246,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         // GCS 위치 표시 //
         naverMap.setLocationSource(locationSource);
         naverMap.setLocationTrackingMode(LocationTrackingMode.NoFollow);
-
-        // 지도를 클릭하면 정보 창을 닫음 //
-        naverMap.setOnMapClickListener(new NaverMap.OnMapClickListener() {
-            @Override
-            public void onMapClick(@NonNull PointF pointF, @NonNull LatLng latLng) {
-                infoWindow.get(infoWindowCount).close();
-            }
-        });
-
-        Overlay.OnClickListener listener = new Overlay.OnClickListener() {
-            @Override
-            public boolean onClick(@NonNull Overlay overlay) {
-                Marker marker = (Marker)overlay;
-
-                if (marker.getInfoWindow() == null) {
-                    infoWindow.get(infoWindowCount).open(marker);
-                } else {
-                    infoWindow.get(infoWindowCount).close();
-                }
-                return true;
-            }
-        };
-
-        //marker.setOnClickListener(listener);
     }
 
     // Drone Log update //
@@ -299,9 +266,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     protected void orderListLog(String message) {
         // 주문 리스트 //
-        if (i <100) {
-            mOrderDataLog.add(String.format(" %d - " + message, i));
-            i++;
+        if (orderMarkerCount <= 50) {
+            mOrderDataLog.add(String.format(" %d - " + message, orderMarkerCount + 1));
+            orderMarkerCount++;
         }
         mOrderRecyclerView.smoothScrollToPosition(mOrderDataLog.size()-1);
         mOrderLog.notifyDataSetChanged();
@@ -468,7 +435,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             @Override
             public void onError(int executionError) {
                 alertUserError("비행 모드 변경 실패 : " + executionError);
-                ttsPrint("비행 모드 변경 실패");
             }
 
             @Override
@@ -491,6 +457,11 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         TextView title = dialogView.findViewById(R.id.title);
         TextView message = dialogView.findViewById(R.id.message);
         LinearLayout addressLayout = dialogView.findViewById(R.id.addressLayout);
+        LinearLayout orderDetailLayout = dialogView.findViewById(R.id.orderDetail);
+
+        addressLayout.setVisibility(View.GONE);
+        orderDetailLayout.setVisibility(View.GONE);
+
         Button btnPositive = dialogView.findViewById(R.id.btnPositive);
         Button btnNegative = dialogView.findViewById(R.id.btnNegative);
 
@@ -499,7 +470,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         } else if (vehicleState.isArmed()) {
             title.setText("이륙 경고");
             message.setText("지정한 이륙고도까지 기체가 상승합니다.\n안전거리를 유지하세요.");
-            addressLayout.setVisibility(View.GONE);
             btnPositive.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
@@ -520,7 +490,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         } else {
             title.setText("시동 경고");
             message.setText("모터를 가동합니다.\n모터가 고속으로 회전합니다.");
-            addressLayout.setVisibility(View.GONE);
             btnPositive.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
@@ -601,13 +570,25 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     public void onClearButtonTap(View view) {
         if (this.drone.isConnected()) {
-            alertUser("배달 데이터 삭제.");
+            alertUser("주문 목록 & 배달 데이터 삭제");
+            ttsPrint("모든 데이터를 삭제합니다.");
 
             poly.removeAll(poly);
+            mOrderDataLog.removeAll(mOrderDataLog);
+            mOrderLog.notifyDataSetChanged();
             polylineOverlay.setMap(null);
 
+            if (orderMarker.size() != 0) {
+                for (int i = 0; i < orderMarker.size(); i++) {
+                    orderMarker.get(i).setMap(null);
+                }
+            }
+            poly.clear();
+            orderMarker.clear();
+            mOrderDataLog.clear();
+            orderMarkerCount = 0;
         } else {
-            alertUser("먼저 드론을 연결해 주세요.");
+            alertUserError("먼저 드론을 연결해 주세요.");
         }
     }
 
@@ -663,20 +644,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
     }
 
-    public void onBtnOrderTap(View view) {
-        final Button SetOrderButton = findViewById(R.id.btnSetOrder);
-
-        if (SetOrderButton.getVisibility() == View.GONE) {
-            SetOrderButton.setVisibility(View.VISIBLE);
-        } else {
-            SetOrderButton.setVisibility(View.GONE);
-        }
-    }
-
     public void onBtnSetOrderTap(View view) {
-        final Button SetOrderButton = findViewById(R.id.btnSetOrder);
-        TextView orderValue = findViewById(R.id.btnOrder);
-
         AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
         View dialogView = getLayoutInflater().inflate(R.layout.custom_dialog, null);
         builder.setView(dialogView);
@@ -684,17 +652,12 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         final AlertDialog alertDialog = builder.create();
         final Geocoder geocoder = new Geocoder(this);
 
-        switch (view.getId()) {
-            case R.id.btnSetOrder:
-                orderValue.setText("주소 설정");
-                SetOrderButton.setVisibility(View.GONE);
-                break;
-        }
-
-        TextView message = dialogView.findViewById(R.id.message);
-        message.setVisibility(View.GONE);
-
         TextView title = dialogView.findViewById(R.id.title);
+        TextView message = dialogView.findViewById(R.id.message);
+        LinearLayout orderDetailLayout = dialogView.findViewById(R.id.orderDetail);
+
+        message.setVisibility(View.GONE);
+        orderDetailLayout.setVisibility(View.GONE);
         title.setText("주소를 입력해 주세요");
 
         final EditText addressText = dialogView.findViewById(R.id.addressBox);
@@ -728,12 +691,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                         orderMarker.add(marker);
                         mNaverMap.moveCamera(cameraUpdate);
                         orderListLog("배달주소 : " + address + " " + detailAddress);
-                        ttsPrint("배달주소 : " + address + " " + detailAddress);
-
-                        orderInfoWindow.open(orderMarker.get(orderMarkerCount));
-                        infoWindow.add(orderInfoWindow);
-                        orderMarkerCount++;
-                        infoWindowCount++;
+                        ttsPrint("새로운 주문이 접수되었습니다.");
                     }
                 }
                 alertDialog.dismiss();
@@ -851,12 +809,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         droneMarker.setMap(null); // Clear drone marker
         polylineOverlay.setMap(null); // Clear path
-        if (orderMarker.size() != 0) {
-            for (int i = 0; i < orderMarker.size(); i++) {
-                orderMarker.get(i).setMap(null);
-            }
-        }
-        orderMarker.clear();
     }
 
     protected void updateVoltage() { // Drone battery value
@@ -966,9 +918,15 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     public void delOrder() {
-        mOrderLog.setOnItemLongClickListener(new OrderLog.OnItemLongClickListener() {
+        ItemTouchHelper.SimpleCallback simpleCallback = new ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT | ItemTouchHelper.RIGHT) {
             @Override
-            public void onItemLongClick(View v, final int pos) {
+            public boolean onMove(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder, @NonNull RecyclerView.ViewHolder viewHolder1) {
+                return false;
+            }
+
+            @Override
+            public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int i) {
+                final int position = viewHolder.getAdapterPosition();
                 AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
                 View dialogView = getLayoutInflater().inflate(R.layout.custom_dialog, null);
                 builder.setView(dialogView);
@@ -976,10 +934,12 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 final AlertDialog alertDialog = builder.create();
 
                 LinearLayout addressLayout = dialogView.findViewById(R.id.addressLayout);
+                LinearLayout orderDetailLayout = dialogView.findViewById(R.id.orderDetail);
                 TextView title = dialogView.findViewById(R.id.title);
                 TextView message = dialogView.findViewById(R.id.message);
 
                 addressLayout.setVisibility(View.GONE);
+                orderDetailLayout.setVisibility(View.GONE);
                 title.setText("삭제하시겠습니까?");
                 message.setText("확인을 누르시면 삭제됩니다.");
 
@@ -987,9 +947,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 btnPositive.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View view) {
-                        mOrderDataLog.remove(pos);
-                        mOrderLog.notifyDataSetChanged();
-                        //marker.setMap(null);
+                        mOrderDataLog.remove(position);
+                        mOrderLog.notifyItemRemoved(position);
+                        orderMarker.get(position).setMap(null);
                         alertDialog.dismiss();
                     }
                 });
@@ -997,14 +957,19 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 btnNegative.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
+                        mOrderLog.notifyDataSetChanged();
                         alertDialog.dismiss();
                     }
                 });
                 alertDialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
                 alertDialog.show();
             }
-        });
+        };
+
+        ItemTouchHelper itemTouchHelper = new ItemTouchHelper(simpleCallback);
+        itemTouchHelper.attachToRecyclerView(mOrderRecyclerView);
     }
+
     @Override
     public void onLinkStateUpdated(@NonNull LinkConnectionStatus connectionStatus) {
         switch(connectionStatus.getStatusCode()){
