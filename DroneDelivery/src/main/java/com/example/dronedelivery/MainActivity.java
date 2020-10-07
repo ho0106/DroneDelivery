@@ -1,11 +1,13 @@
 package com.example.dronedelivery;
 
+import android.app.ProgressDialog;
 import android.content.Context;
 import android.graphics.Color;
 import android.graphics.PointF;
 import android.graphics.drawable.ColorDrawable;
 import android.location.Address;
 import android.location.Geocoder;
+import android.os.AsyncTask;
 import android.os.Handler;
 import android.speech.tts.TextToSpeech;
 import android.support.annotation.NonNull;
@@ -53,6 +55,7 @@ import com.o3dr.android.client.interfaces.LinkListener;
 import com.o3dr.android.client.interfaces.TowerListener;
 import com.o3dr.android.client.apis.ControlApi;
 import com.o3dr.android.client.apis.VehicleApi;
+import com.o3dr.services.android.lib.coordinate.LatLong;
 import com.o3dr.services.android.lib.drone.attribute.AttributeEvent;
 import com.o3dr.services.android.lib.drone.attribute.AttributeEventExtra;
 import com.o3dr.services.android.lib.drone.attribute.AttributeType;
@@ -72,14 +75,25 @@ import com.o3dr.services.android.lib.gcs.link.LinkConnectionStatus;
 import com.o3dr.services.android.lib.model.AbstractCommandListener;
 import com.o3dr.services.android.lib.model.SimpleCommandListener;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import static android.speech.tts.TextToSpeech.ERROR;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.*;
 
 public class MainActivity extends AppCompatActivity implements OnMapReadyCallback, DroneListener, TowerListener, LinkListener {
 
     private static final String TAG = MainActivity.class.getSimpleName();
+    private static String IP_ADDRESS = "61.33.158.137";
 
     // NaverMap
     NaverMap mNaverMap;
@@ -101,6 +115,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     RecyclerView mOrderRecyclerView;
     OrderLog mOrderLog;
     ArrayList mOrderDataLog = new ArrayList();
+    List<LatLng> mAddress = new ArrayList<>();
 
     // Drone
     private Drone drone;
@@ -116,6 +131,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private TextToSpeech tts;
 
     // Mission
+    private GuideMode mGuideMode;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -179,8 +195,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         checkOrder();
         delOrder();
 
-
-
         // Drone start //
         final Context context = getApplicationContext();
         this.controlTower = new ControlTower(context);
@@ -208,6 +222,14 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     // 언어를 선택한다.
                     tts.setLanguage(Locale.KOREAN);
                 }
+            }
+        });
+
+        Button deliveryStart = (Button) findViewById(R.id.btnDeliveryStart);
+        deliveryStart.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                runGuideMode(mAddress.get(0));
             }
         });
     }
@@ -569,13 +591,14 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     public void onClearButtonTap(View view) {
-        if (this.drone.isConnected()) {
+        //if (this.drone.isConnected()) {
             alertUser("주문 목록 & 배달 데이터 삭제");
             ttsPrint("모든 데이터를 삭제합니다.");
 
             poly.removeAll(poly);
             mOrderDataLog.removeAll(mOrderDataLog);
             mOrderLog.notifyDataSetChanged();
+            mAddress.removeAll(mAddress);
             polylineOverlay.setMap(null);
 
             if (orderMarker.size() != 0) {
@@ -586,10 +609,11 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             poly.clear();
             orderMarker.clear();
             mOrderDataLog.clear();
+            mAddress.clear();
             orderMarkerCount = 0;
-        } else {
-            alertUserError("먼저 드론을 연결해 주세요.");
-        }
+        //} else {
+            //alertUserError("먼저 드론을 연결해 주세요.");
+        //}
     }
 
     public void onMapMoveButtonTap(View view) {
@@ -682,6 +706,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                         alertUserError("해당주소 없음.");
                     } else {
                         LatLng mar = new LatLng(list.get(0).getLatitude(), list.get(0).getLongitude());
+                        mAddress.add(mar);
                         CameraUpdate cameraUpdate = CameraUpdate.scrollTo(mar).animate(CameraAnimation.Linear);
                         Marker marker = new Marker();
 
@@ -883,6 +908,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         mOrderLog.setOnItemClickListener(new OrderLog.OnItemClickListener() {
             @Override
             public void onItemClick(View v, int pos) {
+                CameraUpdate cameraUpdate = CameraUpdate.scrollTo(mAddress.get(pos)).animate(CameraAnimation.Linear);
+                mNaverMap.moveCamera(cameraUpdate);
                 AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
                 View dialogView = getLayoutInflater().inflate(R.layout.custom_dialog, null);
                 builder.setView(dialogView);
@@ -949,6 +976,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     public void onClick(View view) {
                         mOrderDataLog.remove(position);
                         mOrderLog.notifyItemRemoved(position);
+                        mAddress.remove(position);
                         orderMarker.get(position).setMap(null);
                         alertDialog.dismiss();
                     }
@@ -968,6 +996,51 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         ItemTouchHelper itemTouchHelper = new ItemTouchHelper(simpleCallback);
         itemTouchHelper.attachToRecyclerView(mOrderRecyclerView);
+    }
+
+    private void runGuideMode(LatLng guideLatLng) {
+        State vehicleState = drone.getAttribute(AttributeType.STATE);
+        final LatLong target = new LatLong(guideLatLng.latitude, guideLatLng.longitude);
+
+        if (vehicleState.isConnected()) {
+            if (vehicleState.isArmed()) {
+                if (vehicleState.isFlying()) {
+                    if (vehicleState.getVehicleMode() == vehicleState.getVehicleMode().COPTER_GUIDED) {
+                        mGuideMode.mGuidedPoint = guideLatLng;
+                        mGuideMode.mMarkerGuide.setPosition(guideLatLng);
+                        mGuideMode.mMarkerGuide.setMap(mNaverMap);
+                        ControlApi.getApi(drone).goTo(target, true, new AbstractCommandListener() {
+                            @Override
+                            public void onSuccess() {
+                                alertUser("현재고도를 유지하며 이동합니다.");
+                            }
+
+                            @Override
+                            public void onError(int executionError) {
+                                alertUserError("이동할 수 없습니다.");
+                            }
+
+                            @Override
+                            public void onTimeout() {
+                                alertUserError("시간초과.");
+                            }
+                        });
+
+                    } else if (vehicleState.getVehicleMode() != vehicleState.getVehicleMode().COPTER_GUIDED) {
+                        mGuideMode.mGuidedPoint = guideLatLng;
+                        mGuideMode.mMarkerGuide.setPosition(guideLatLng);
+                        mGuideMode.mMarkerGuide.setMap(mNaverMap);
+                        mGuideMode.DialogSimple(drone, target);
+                    }
+                } else {
+                    alertUserError("비행중이 아닙니다.");
+                }
+            } else {
+                alertUserError("시동을 걸어주세요.");
+            }
+        } else {
+            alertUserError("드론을 연결해주세요.");
+        }
     }
 
     @Override
