@@ -1024,6 +1024,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                                         @Override
                                         public void onSuccess() {
                                             alertUser("현재고도를 유지하며 이동합니다.");
+                                            ttsPrint("배달을 시작합니다.");
                                         }
 
                                         @Override
