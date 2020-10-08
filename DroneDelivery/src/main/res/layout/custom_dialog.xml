@@ -97,6 +97,31 @@
                         android:textSize="@dimen/text_size"
                         android:textColor="@color/colorText" />
                 </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="horizontal" >
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginLeft="5dp"
+                        android:fontFamily="@font/fontstyles"
+                        android:text="요청 사항 : "
+                        android:textSize="@dimen/text_size"
+                        android:textColor="@color/colorText" />
+
+                    <EditText
+                        android:id="@+id/requestBox"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/fontstyles"
+                        android:gravity="center"
+                        android:text=""
+                        android:textSize="@dimen/text_size"
+                        android:textColor="@color/colorText" />
+                </LinearLayout>
             </LinearLayout>
         </LinearLayout>
 
@@ -127,6 +152,7 @@
                         android:textColor="@color/colorText" />
 
                     <TextView
+                        android:id="@+id/receiveAddress"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:fontFamily="@font/fontstyles"
@@ -151,6 +177,7 @@
                         android:textColor="@color/colorText" />
 
                     <TextView
+                        android:id="@+id/receiveRequest"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:fontFamily="@font/fontstyles"

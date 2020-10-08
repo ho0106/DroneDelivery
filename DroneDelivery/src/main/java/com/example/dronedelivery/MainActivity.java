@@ -78,6 +78,7 @@ import com.o3dr.services.android.lib.model.SimpleCommandListener;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.w3c.dom.Text;
 
 import static android.speech.tts.TextToSpeech.ERROR;
 
@@ -115,7 +116,10 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     RecyclerView mOrderRecyclerView;
     OrderLog mOrderLog;
     ArrayList mOrderDataLog = new ArrayList();
-    List<LatLng> mAddress = new ArrayList<>();
+    List<LatLng> mOrderAddress = new ArrayList<>(); // 주문 좌표 저장 스택
+    LatLong mOrderTarget; // 변경된 좌표 저장
+    List<String> mReceiveAddress = new ArrayList<>();
+    List<String> mReceiveRequest = new ArrayList<>();
 
     // Drone
     private Drone drone;
@@ -222,14 +226,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     // 언어를 선택한다.
                     tts.setLanguage(Locale.KOREAN);
                 }
-            }
-        });
-
-        Button deliveryStart = (Button) findViewById(R.id.btnDeliveryStart);
-        deliveryStart.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                runGuideMode(mAddress.get(0));
             }
         });
     }
@@ -592,27 +588,28 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     public void onClearButtonTap(View view) {
         //if (this.drone.isConnected()) {
-            alertUser("주문 목록 & 배달 데이터 삭제");
-            ttsPrint("모든 데이터를 삭제합니다.");
+        alertUser("주문 목록 & 배달 데이터 삭제");
+        ttsPrint("모든 데이터를 삭제합니다.");
 
-            poly.removeAll(poly);
-            mOrderDataLog.removeAll(mOrderDataLog);
-            mOrderLog.notifyDataSetChanged();
-            mAddress.removeAll(mAddress);
-            polylineOverlay.setMap(null);
+        poly.removeAll(poly);
+        mOrderDataLog.removeAll(mOrderDataLog);
+        mOrderLog.notifyDataSetChanged();
+        mOrderAddress.removeAll(mOrderAddress);
+        polylineOverlay.setMap(null);
+        runGuideMode(null);
 
-            if (orderMarker.size() != 0) {
-                for (int i = 0; i < orderMarker.size(); i++) {
-                    orderMarker.get(i).setMap(null);
-                }
+        if (orderMarker.size() != 0) {
+            for (int i = 0; i < orderMarker.size(); i++) {
+                orderMarker.get(i).setMap(null);
             }
-            poly.clear();
-            orderMarker.clear();
-            mOrderDataLog.clear();
-            mAddress.clear();
-            orderMarkerCount = 0;
+        }
+        poly.clear();
+        orderMarker.clear();
+        mOrderDataLog.clear();
+        mOrderAddress.clear();
+        orderMarkerCount = 0;
         //} else {
-            //alertUserError("먼저 드론을 연결해 주세요.");
+        //alertUserError("먼저 드론을 연결해 주세요.");
         //}
     }
 
@@ -686,6 +683,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         final EditText addressText = dialogView.findViewById(R.id.addressBox);
         final EditText detailAddressText = dialogView.findViewById(R.id.detailAddressBox);
+        final EditText requestText = dialogView.findViewById(R.id.requestBox);
         Button btnPositive = dialogView.findViewById(R.id.btnPositive);
         btnPositive.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -694,6 +692,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
                 String address = addressText.getText().toString();
                 String detailAddress = detailAddressText.getText().toString();
+                String request = requestText.getText().toString();
                 try {
                     list = geocoder.getFromLocationName(address,10);
                 } catch (IOException e) {
@@ -706,15 +705,16 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                         alertUserError("해당주소 없음.");
                     } else {
                         LatLng mar = new LatLng(list.get(0).getLatitude(), list.get(0).getLongitude());
-                        mAddress.add(mar);
+                        mOrderAddress.add(mar);
                         CameraUpdate cameraUpdate = CameraUpdate.scrollTo(mar).animate(CameraAnimation.Linear);
                         Marker marker = new Marker();
 
                         marker.setPosition(mar);
                         marker.setMap(mNaverMap);
-                        marker.setTag(address);
                         orderMarker.add(marker);
                         mNaverMap.moveCamera(cameraUpdate);
+                        mReceiveAddress.add(address + " " + detailAddress);
+                        mReceiveRequest.add(request);
                         orderListLog("배달주소 : " + address + " " + detailAddress);
                         ttsPrint("새로운 주문이 접수되었습니다.");
                     }
@@ -907,8 +907,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     public void checkOrder() {
         mOrderLog.setOnItemClickListener(new OrderLog.OnItemClickListener() {
             @Override
-            public void onItemClick(View v, int pos) {
-                CameraUpdate cameraUpdate = CameraUpdate.scrollTo(mAddress.get(pos)).animate(CameraAnimation.Linear);
+            public void onItemClick(View v, final int pos) {
+                CameraUpdate cameraUpdate = CameraUpdate.scrollTo(mOrderAddress.get(pos)).animate(CameraAnimation.Linear);
                 mNaverMap.moveCamera(cameraUpdate);
                 AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
                 View dialogView = getLayoutInflater().inflate(R.layout.custom_dialog, null);
@@ -919,15 +919,26 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 LinearLayout addressLayout = dialogView.findViewById(R.id.addressLayout);
                 TextView title = dialogView.findViewById(R.id.title);
                 TextView message = dialogView.findViewById(R.id.message);
+                TextView address = dialogView.findViewById(R.id.receiveAddress);
+                TextView request = dialogView.findViewById(R.id.receiveRequest);
+
+                final String receiveAddress = mReceiveAddress.get(pos);
+                String receiveRequest = mReceiveRequest.get(pos);
 
                 addressLayout.setVisibility(View.GONE);
                 title.setText("주문 상세 정보");
                 message.setVisibility(View.GONE);
+                address.setText(receiveAddress);
+                request.setText(receiveRequest);
 
                 Button btnPositive = dialogView.findViewById(R.id.btnPositive);
                 btnPositive.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View view) {
+                        mOrderTarget = new LatLong(mOrderAddress.get(pos).latitude, mOrderAddress.get(pos).longitude);
+                        runGuideMode(mOrderTarget);
+                        alertUser("배달 주소 좌표가 변경되었습니다.");
+                        ttsPrint("배달 좌표가 " + receiveAddress + " 로 변경되었습니다.");
                         alertDialog.dismiss();
                     }
                 });
@@ -976,7 +987,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     public void onClick(View view) {
                         mOrderDataLog.remove(position);
                         mOrderLog.notifyItemRemoved(position);
-                        mAddress.remove(position);
+                        mOrderAddress.remove(position);
                         orderMarker.get(position).setMap(null);
                         alertDialog.dismiss();
                     }
@@ -998,49 +1009,51 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         itemTouchHelper.attachToRecyclerView(mOrderRecyclerView);
     }
 
-    private void runGuideMode(LatLng guideLatLng) {
-        State vehicleState = drone.getAttribute(AttributeType.STATE);
-        final LatLong target = new LatLong(guideLatLng.latitude, guideLatLng.longitude);
+    private void runGuideMode(final LatLong deliveryPoint) {
+        Button deliveryStart = (Button) findViewById(R.id.btnDeliveryStart);
+        deliveryStart.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                State vehicleState = drone.getAttribute(AttributeType.STATE);
+                if (mOrderAddress.size() != 0) {
+                    if (vehicleState.isConnected()) {
+                        if (vehicleState.isArmed()) {
+                            if (vehicleState.isFlying()) {
+                                if (vehicleState.getVehicleMode() == vehicleState.getVehicleMode().COPTER_GUIDED) {
+                                    ControlApi.getApi(drone).goTo(deliveryPoint, true, new AbstractCommandListener() {
+                                        @Override
+                                        public void onSuccess() {
+                                            alertUser("현재고도를 유지하며 이동합니다.");
+                                        }
 
-        if (vehicleState.isConnected()) {
-            if (vehicleState.isArmed()) {
-                if (vehicleState.isFlying()) {
-                    if (vehicleState.getVehicleMode() == vehicleState.getVehicleMode().COPTER_GUIDED) {
-                        mGuideMode.mGuidedPoint = guideLatLng;
-                        mGuideMode.mMarkerGuide.setPosition(guideLatLng);
-                        mGuideMode.mMarkerGuide.setMap(mNaverMap);
-                        ControlApi.getApi(drone).goTo(target, true, new AbstractCommandListener() {
-                            @Override
-                            public void onSuccess() {
-                                alertUser("현재고도를 유지하며 이동합니다.");
+                                        @Override
+                                        public void onError(int executionError) {
+                                            alertUserError("이동할 수 없습니다.");
+                                        }
+
+                                        @Override
+                                        public void onTimeout() {
+                                            alertUserError("시간초과.");
+                                        }
+                                    });
+
+                                } else if (vehicleState.getVehicleMode() != vehicleState.getVehicleMode().COPTER_GUIDED) {
+                                    mGuideMode.DialogSimple(drone, deliveryPoint);
+                                }
+                            } else {
+                                alertUserError("비행중이 아닙니다.");
                             }
-
-                            @Override
-                            public void onError(int executionError) {
-                                alertUserError("이동할 수 없습니다.");
-                            }
-
-                            @Override
-                            public void onTimeout() {
-                                alertUserError("시간초과.");
-                            }
-                        });
-
-                    } else if (vehicleState.getVehicleMode() != vehicleState.getVehicleMode().COPTER_GUIDED) {
-                        mGuideMode.mGuidedPoint = guideLatLng;
-                        mGuideMode.mMarkerGuide.setPosition(guideLatLng);
-                        mGuideMode.mMarkerGuide.setMap(mNaverMap);
-                        mGuideMode.DialogSimple(drone, target);
+                        } else {
+                            alertUserError("시동을 걸어주세요.");
+                        }
+                    } else {
+                        alertUserError("드론을 연결해주세요.");
                     }
                 } else {
-                    alertUserError("비행중이 아닙니다.");
+                    alertUser("주문목록이 없습니다.");
                 }
-            } else {
-                alertUserError("시동을 걸어주세요.");
             }
-        } else {
-            alertUserError("드론을 연결해주세요.");
-        }
+        });
     }
 
     @Override
@@ -1052,7 +1065,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 if (extras != null) {
                     msg = extras.getString(LinkConnectionStatus.EXTRA_ERROR_MSG);
                 }
-                alertUserError("Connection Failed:" + msg);
+                alertUserError("Connection Failed : " + msg);
                 break;
         }
     }
