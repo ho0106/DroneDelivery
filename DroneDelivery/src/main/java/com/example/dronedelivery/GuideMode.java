@@ -52,11 +52,6 @@ public class GuideMode extends AppCompatActivity {
         AlertDialog alert = alt_bld.create();
         alert.show();
     }
-    public static boolean CheckGoal(final Drone drone, LatLng recentLatLng) {
-        GuidedState guidedState = drone.getAttribute(AttributeType.GUIDED_STATE);
-        LatLng target = new LatLng(guidedState.getCoordinate().getLatitude(), guidedState.getCoordinate().getLongitude());
-        return target.distanceTo(recentLatLng) <= 1;
-    }
 
     // Custom Dialog
     /*public void DialogDimpleCustom(final Drone drone, final LatLong point) {

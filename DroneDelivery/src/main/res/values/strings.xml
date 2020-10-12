@@ -2,7 +2,6 @@
     <string name="app_name">배달드론</string>
     <string name="Positive">확인</string>
     <string name="Negative">취소</string>
-    <string name="error_test">&lt;font color="#ff0000">errortest&lt;/font></string>
 
     <string name="vehicle_arm">ARN</string>
     <string name="vehicle_takeoff">TAKE OFF</string>

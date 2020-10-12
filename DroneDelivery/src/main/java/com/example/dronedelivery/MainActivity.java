@@ -2,6 +2,7 @@ package com.example.dronedelivery;
 
 import android.app.ProgressDialog;
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.PointF;
 import android.graphics.drawable.ColorDrawable;
@@ -198,6 +199,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         mOrderRecyclerView.setAdapter(mOrderLog);
         checkOrder();
         delOrder();
+        mGuideMode = new GuideMode(this);
 
         // Drone start //
         final Context context = getApplicationContext();
@@ -580,7 +582,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
                 @Override
                 public void onTimeout() {
-                    alertUser("시간초과, (ARM)");
+                    alertUser("시간초과. (ARM)");
                 }
             });
         }
@@ -596,7 +598,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         mOrderLog.notifyDataSetChanged();
         mOrderAddress.removeAll(mOrderAddress);
         polylineOverlay.setMap(null);
-        runGuideMode(null);
+        mOrderTarget = null;
 
         if (orderMarker.size() != 0) {
             for (int i = 0; i < orderMarker.size(); i++) {
@@ -736,6 +738,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     // UI Updating //
 
     public void updateDroneLocation() {
+        State vehicleState = this.drone.getAttribute(AttributeType.STATE);
+        VehicleMode vehicleMode = vehicleState.getVehicleMode();
         mGps = this.drone.getAttribute(AttributeType.GPS);
 
         LatLng droneLocation = new LatLng(mGps.getPosition().getLatitude(), mGps.getPosition().getLongitude());
@@ -780,6 +784,31 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             polylineOverlay.setJoinType(PolylineOverlay.LineJoin.Round);
             polylineOverlay.setColor(Color.RED);
             polylineOverlay.setMap(mNaverMap);
+        }
+        // stop Guide Mode //
+        if (vehicleMode == VehicleMode.COPTER_GUIDED) {
+            LatLng orderTarget = new LatLng(mOrderTarget.getLatitude(), mOrderTarget.getLongitude());
+            double distance = droneLocation.distanceTo(orderTarget);
+
+            if (distance < 1.0) {
+                VehicleApi.getApi(this.drone).setVehicleMode(VehicleMode.COPTER_LAND, new AbstractCommandListener() {
+                    @Override
+                    public void onSuccess() {
+                        alertUser("목표지점에 도착.");
+                        ttsPrint("목표지점에 도착하였습니다.");
+                    }
+
+                    @Override
+                    public void onError(int executionError) {
+                        alertUserError("드론이 착륙할 수 없습니다.");
+                    }
+
+                    @Override
+                    public void onTimeout() {
+                        alertUserError("타임아웃.");
+                    }
+                });
+            }
         }
     }
 
@@ -936,7 +965,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     @Override
                     public void onClick(View view) {
                         mOrderTarget = new LatLong(mOrderAddress.get(pos).latitude, mOrderAddress.get(pos).longitude);
-                        runGuideMode(mOrderTarget);
                         alertUser("배달 주소 좌표가 변경되었습니다.");
                         ttsPrint("배달 좌표가 " + receiveAddress + " 로 변경되었습니다.");
                         alertDialog.dismiss();
@@ -1009,52 +1037,46 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         itemTouchHelper.attachToRecyclerView(mOrderRecyclerView);
     }
 
-    private void runGuideMode(final LatLong deliveryPoint) {
-        Button deliveryStart = (Button) findViewById(R.id.btnDeliveryStart);
-        deliveryStart.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                State vehicleState = drone.getAttribute(AttributeType.STATE);
-                if (mOrderAddress.size() != 0) {
-                    if (vehicleState.isConnected()) {
-                        if (vehicleState.isArmed()) {
-                            if (vehicleState.isFlying()) {
-                                if (vehicleState.getVehicleMode() == vehicleState.getVehicleMode().COPTER_GUIDED) {
-                                    ControlApi.getApi(drone).goTo(deliveryPoint, true, new AbstractCommandListener() {
-                                        @Override
-                                        public void onSuccess() {
-                                            alertUser("현재고도를 유지하며 이동합니다.");
-                                            ttsPrint("배달을 시작합니다.");
-                                        }
-
-                                        @Override
-                                        public void onError(int executionError) {
-                                            alertUserError("이동할 수 없습니다.");
-                                        }
-
-                                        @Override
-                                        public void onTimeout() {
-                                            alertUserError("시간초과.");
-                                        }
-                                    });
-
-                                } else if (vehicleState.getVehicleMode() != vehicleState.getVehicleMode().COPTER_GUIDED) {
-                                    mGuideMode.DialogSimple(drone, deliveryPoint);
+    public void runGuideMode(View view) {
+        State vehicleState = drone.getAttribute(AttributeType.STATE);
+        if (mOrderAddress.size() != 0) {
+            if (vehicleState.isConnected()) {
+                if (vehicleState.isArmed()) {
+                    if (vehicleState.isFlying()) {
+                        if (vehicleState.getVehicleMode() == vehicleState.getVehicleMode().COPTER_GUIDED) {
+                            ControlApi.getApi(drone).goTo(mOrderTarget, true, new AbstractCommandListener() {
+                                @Override
+                                public void onSuccess() {
+                                    alertUser("현재고도를 유지하며 이동합니다.");
+                                    ttsPrint("배달을 시작합니다.");
                                 }
-                            } else {
-                                alertUserError("비행중이 아닙니다.");
-                            }
-                        } else {
-                            alertUserError("시동을 걸어주세요.");
+
+                                @Override
+                                public void onError(int executionError) {
+                                    alertUserError("이동할 수 없습니다.");
+                                }
+
+                                @Override
+                                public void onTimeout() {
+                                    alertUserError("시간초과.");
+                                }
+                            });
+
+                        } else if (vehicleState.getVehicleMode() != vehicleState.getVehicleMode().COPTER_GUIDED) {
+                            mGuideMode.DialogSimple(drone, mOrderTarget);
                         }
                     } else {
-                        alertUserError("드론을 연결해주세요.");
+                        alertUserError("비행중이 아닙니다.");
                     }
                 } else {
-                    alertUser("주문목록이 없습니다.");
+                    alertUserError("시동을 걸어주세요.");
                 }
+            } else {
+                alertUserError("드론을 연결해주세요.");
             }
-        });
+        } else {
+            alertUser("주문목록이 없습니다.");
+        }
     }
 
     @Override
