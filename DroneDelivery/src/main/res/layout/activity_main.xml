@@ -355,9 +355,10 @@
             android:layout_height="70dp"
             android:layout_marginBottom="5dp"
             android:background="@drawable/ic_top_button_styles"
-            android:text="주문 확인"
+            android:text="암호 전송"
             android:textSize="15dp"
             android:textColor="#ffffff"
-            android:fontFamily="@font/fontstyles"  />
+            android:fontFamily="@font/fontstyles"
+            android:onClick="sendPassword" />
     </LinearLayout>
 </android.support.constraint.ConstraintLayout>

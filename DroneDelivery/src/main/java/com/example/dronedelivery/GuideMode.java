@@ -16,6 +16,8 @@ import com.o3dr.services.android.lib.drone.property.VehicleMode;
 import com.o3dr.services.android.lib.model.AbstractCommandListener;
 
 public class GuideMode extends AppCompatActivity {
+    LatLng mGuidedPoint; // 가이드모드 목적지 저장.
+    Marker mMarkerGuide = new com.naver.maps.map.overlay.Marker(); // 가이드모드 마커 생성
     private MainActivity mMainActivity;
 
     public GuideMode(MainActivity mainActivity) {

@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">배달드론</string>
+    <string name="app_name">Drone Delivery</string>
     <string name="Positive">확인</string>
     <string name="Negative">취소</string>
 

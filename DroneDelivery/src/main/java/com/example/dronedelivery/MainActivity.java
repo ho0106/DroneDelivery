@@ -20,6 +20,7 @@ import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.helper.ItemTouchHelper;
+import android.telephony.SmsManager;
 import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
@@ -118,9 +119,10 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     OrderLog mOrderLog;
     ArrayList mOrderDataLog = new ArrayList();
     List<LatLng> mOrderAddress = new ArrayList<>(); // 주문 좌표 저장 스택
-    LatLong mOrderTarget; // 변경된 좌표 저장
+    LatLng mOrderTarget; // 변경된 좌표 저장
     List<String> mReceiveAddress = new ArrayList<>();
     List<String> mReceiveRequest = new ArrayList<>();
+    Random random;
 
     // Drone
     private Drone drone;
@@ -142,6 +144,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        random = new Random();
 
         // Full screen //
         int uiOptions = getWindow().getDecorView().getSystemUiVisibility();
@@ -266,6 +269,58 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         // GCS 위치 표시 //
         naverMap.setLocationSource(locationSource);
         naverMap.setLocationTrackingMode(LocationTrackingMode.NoFollow);
+
+        mNaverMap.setOnMapLongClickListener(new NaverMap.OnMapLongClickListener() {
+            @Override
+            public void onMapLongClick(@NonNull PointF pointF, @NonNull LatLng latLng) {
+                mOrderTarget = latLng;
+                testGuideMode(latLng);
+            }
+        });
+    }
+
+    private void testGuideMode(LatLng guideLatLng) {
+        State vehicleState = drone.getAttribute(AttributeType.STATE);
+        final LatLong target = new LatLong(guideLatLng.latitude, guideLatLng.longitude);
+
+        if (vehicleState.isConnected()) {
+            if (vehicleState.isArmed()) {
+                if (vehicleState.isFlying()) {
+                    if (vehicleState.getVehicleMode() == vehicleState.getVehicleMode().COPTER_GUIDED) {
+                        mGuideMode.mGuidedPoint = guideLatLng;
+                        mGuideMode.mMarkerGuide.setPosition(guideLatLng);
+                        mGuideMode.mMarkerGuide.setMap(mNaverMap);
+                        ControlApi.getApi(drone).goTo(target, true, new AbstractCommandListener() {
+                            @Override
+                            public void onSuccess() {
+                                alertUser("현재고도를 유지하며 이동합니다.");
+                            }
+
+                            @Override
+                            public void onError(int executionError) {
+                                alertUser("이동할 수 없습니다.");
+                            }
+
+                            @Override
+                            public void onTimeout() {
+                                alertUser("시간초과.");
+                            }
+                        });
+                    } else if (vehicleState.getVehicleMode() != vehicleState.getVehicleMode().COPTER_GUIDED) {
+                        mGuideMode.mGuidedPoint = guideLatLng;
+                        mGuideMode.mMarkerGuide.setPosition(guideLatLng);
+                        mGuideMode.mMarkerGuide.setMap(mNaverMap);
+                        mGuideMode.DialogSimple(drone, target);
+                    }
+                } else {
+                    alertUser("비행중이 아닙니다.");
+                }
+            } else {
+                alertUser("시동을 걸어주세요.");
+            }
+        } else {
+            alertUser("드론을 연결해주세요.");
+        }
     }
 
     // Drone Log update //
@@ -477,10 +532,12 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         TextView title = dialogView.findViewById(R.id.title);
         TextView message = dialogView.findViewById(R.id.message);
         LinearLayout addressLayout = dialogView.findViewById(R.id.addressLayout);
-        LinearLayout orderDetailLayout = dialogView.findViewById(R.id.orderDetail);
+        LinearLayout orderDetailLayout = dialogView.findViewById(R.id.orderDetailLayout);
+        LinearLayout snsLayout = dialogView.findViewById(R.id.snsLayout);
 
         addressLayout.setVisibility(View.GONE);
         orderDetailLayout.setVisibility(View.GONE);
+        snsLayout.setVisibility(View.GONE);
 
         Button btnPositive = dialogView.findViewById(R.id.btnPositive);
         Button btnNegative = dialogView.findViewById(R.id.btnNegative);
@@ -675,12 +732,15 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         final AlertDialog alertDialog = builder.create();
         final Geocoder geocoder = new Geocoder(this);
 
+        // Dialog Layout //
+        LinearLayout orderDetailLayout = dialogView.findViewById(R.id.orderDetailLayout);
+        LinearLayout snsLayout = dialogView.findViewById(R.id.snsLayout);
+
         TextView title = dialogView.findViewById(R.id.title);
         TextView message = dialogView.findViewById(R.id.message);
-        LinearLayout orderDetailLayout = dialogView.findViewById(R.id.orderDetail);
-
         message.setVisibility(View.GONE);
         orderDetailLayout.setVisibility(View.GONE);
+        snsLayout.setVisibility(View.GONE);
         title.setText("주소를 입력해 주세요");
 
         final EditText addressText = dialogView.findViewById(R.id.addressBox);
@@ -787,8 +847,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
         // stop Guide Mode //
         if (vehicleMode == VehicleMode.COPTER_GUIDED) {
-            LatLng orderTarget = new LatLng(mOrderTarget.getLatitude(), mOrderTarget.getLongitude());
-            double distance = droneLocation.distanceTo(orderTarget);
+            //LatLng orderTarget = new LatLng(mOrderTarget.getLatitude(), mOrderTarget.getLongitude());
+            double distance = droneLocation.distanceTo(mOrderTarget);
 
             if (distance < 1.0) {
                 VehicleApi.getApi(this.drone).setVehicleMode(VehicleMode.COPTER_LAND, new AbstractCommandListener() {
@@ -945,7 +1005,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
                 final AlertDialog alertDialog = builder.create();
 
+                // Dialog Layout //
                 LinearLayout addressLayout = dialogView.findViewById(R.id.addressLayout);
+                LinearLayout snsLayout = dialogView.findViewById(R.id.snsLayout);
                 TextView title = dialogView.findViewById(R.id.title);
                 TextView message = dialogView.findViewById(R.id.message);
                 TextView address = dialogView.findViewById(R.id.receiveAddress);
@@ -955,6 +1017,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 String receiveRequest = mReceiveRequest.get(pos);
 
                 addressLayout.setVisibility(View.GONE);
+                snsLayout.setVisibility(View.GONE);
                 title.setText("주문 상세 정보");
                 message.setVisibility(View.GONE);
                 address.setText(receiveAddress);
@@ -964,7 +1027,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 btnPositive.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View view) {
-                        mOrderTarget = new LatLong(mOrderAddress.get(pos).latitude, mOrderAddress.get(pos).longitude);
+                        //mOrderTarget = new LatLong(mOrderAddress.get(pos).latitude, mOrderAddress.get(pos).longitude);
                         alertUser("배달 주소 좌표가 변경되었습니다.");
                         ttsPrint("배달 좌표가 " + receiveAddress + " 로 변경되었습니다.");
                         alertDialog.dismiss();
@@ -999,13 +1062,16 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
                 final AlertDialog alertDialog = builder.create();
 
+                // Dialog Layout //
                 LinearLayout addressLayout = dialogView.findViewById(R.id.addressLayout);
-                LinearLayout orderDetailLayout = dialogView.findViewById(R.id.orderDetail);
+                LinearLayout orderDetailLayout = dialogView.findViewById(R.id.orderDetailLayout);
+                LinearLayout snsLayout = dialogView.findViewById(R.id.snsLayout);
                 TextView title = dialogView.findViewById(R.id.title);
                 TextView message = dialogView.findViewById(R.id.message);
 
                 addressLayout.setVisibility(View.GONE);
                 orderDetailLayout.setVisibility(View.GONE);
+                snsLayout.setVisibility(View.GONE);
                 title.setText("삭제하시겠습니까?");
                 message.setText("확인을 누르시면 삭제됩니다.");
 
@@ -1037,46 +1103,101 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         itemTouchHelper.attachToRecyclerView(mOrderRecyclerView);
     }
 
-    public void runGuideMode(View view) {
-        State vehicleState = drone.getAttribute(AttributeType.STATE);
-        if (mOrderAddress.size() != 0) {
-            if (vehicleState.isConnected()) {
-                if (vehicleState.isArmed()) {
-                    if (vehicleState.isFlying()) {
-                        if (vehicleState.getVehicleMode() == vehicleState.getVehicleMode().COPTER_GUIDED) {
-                            ControlApi.getApi(drone).goTo(mOrderTarget, true, new AbstractCommandListener() {
-                                @Override
-                                public void onSuccess() {
-                                    alertUser("현재고도를 유지하며 이동합니다.");
-                                    ttsPrint("배달을 시작합니다.");
-                                }
+//    public void runGuideMode(View view) {
+//        State vehicleState = drone.getAttribute(AttributeType.STATE);
+//        if (mOrderAddress.size() != 0) {
+//            if (vehicleState.isConnected()) {
+//                if (vehicleState.isArmed()) {
+//                    if (vehicleState.isFlying()) {
+//                        if (vehicleState.getVehicleMode() == vehicleState.getVehicleMode().COPTER_GUIDED) {
+//                            ControlApi.getApi(drone).goTo(mOrderTarget, true, new AbstractCommandListener() {
+//                                @Override
+//                                public void onSuccess() {
+//                                    alertUser("현재고도를 유지하며 이동합니다.");
+//                                    ttsPrint("배달을 시작합니다.");
+//                                }
+//
+//                                @Override
+//                                public void onError(int executionError) {
+//                                    alertUserError("이동할 수 없습니다.");
+//                                }
+//
+//                                @Override
+//                                public void onTimeout() {
+//                                    alertUserError("시간초과.");
+//                                }
+//                            });
+//
+//                        } else if (vehicleState.getVehicleMode() != vehicleState.getVehicleMode().COPTER_GUIDED) {
+//                            mGuideMode.DialogSimple(drone, mOrderTarget);
+//                        }
+//                    } else {
+//                        alertUserError("비행중이 아닙니다.");
+//                    }
+//                } else {
+//                    alertUserError("시동을 걸어주세요.");
+//                }
+//            } else {
+//                alertUserError("드론을 연결해주세요.");
+//            }
+//        } else {
+//            alertUser("주문목록이 없습니다.");
+//        }
+//    }
 
-                                @Override
-                                public void onError(int executionError) {
-                                    alertUserError("이동할 수 없습니다.");
-                                }
+    public void sendPassword(View view) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+        View dialogView = getLayoutInflater().inflate(R.layout.custom_dialog, null);
+        builder.setView(dialogView);
 
-                                @Override
-                                public void onTimeout() {
-                                    alertUserError("시간초과.");
-                                }
-                            });
-
-                        } else if (vehicleState.getVehicleMode() != vehicleState.getVehicleMode().COPTER_GUIDED) {
-                            mGuideMode.DialogSimple(drone, mOrderTarget);
-                        }
-                    } else {
-                        alertUserError("비행중이 아닙니다.");
-                    }
-                } else {
-                    alertUserError("시동을 걸어주세요.");
-                }
-            } else {
-                alertUserError("드론을 연결해주세요.");
-            }
-        } else {
-            alertUser("주문목록이 없습니다.");
+        final AlertDialog alertDialog = builder.create();
+        // Password create //
+        StringBuilder stringBuilder = new StringBuilder("");
+        for (int i = 0; i < 4; i++) {
+            stringBuilder.append(random.nextInt(9));
         }
+
+        // Dialog Layout //
+        LinearLayout addressLayout = dialogView.findViewById(R.id.addressLayout);
+        LinearLayout orderDetailLayout = dialogView.findViewById(R.id.orderDetailLayout);
+        TextView title = dialogView.findViewById(R.id.title);
+        TextView message = dialogView.findViewById(R.id.message);
+
+        addressLayout.setVisibility(View.GONE);
+        orderDetailLayout.setVisibility(View.GONE);
+        title.setText("암호 전송");
+        message.setText("핸드폰 번호와 암호를 입력하세요.");
+
+        final EditText phoneNoText = dialogView.findViewById(R.id.phoneNoBox);
+        final EditText passwordText = dialogView.findViewById(R.id.passwordBox);
+        passwordText.setText(stringBuilder.toString());
+
+        Button btnPositive = dialogView.findViewById(R.id.btnPositive);
+        btnPositive.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                String phoneNo = phoneNoText.getText().toString();
+                String password = passwordText.getText().toString();
+                try {
+                    SmsManager smsManager = SmsManager.getDefault();
+                    smsManager.sendTextMessage(phoneNo, null, password, null, null);
+                    Toast.makeText(getApplicationContext(), "전송 완료!", Toast.LENGTH_SHORT).show();
+                } catch (Exception e) {
+                    Toast.makeText(getApplicationContext(), "SNS faild, please try again later!", Toast.LENGTH_LONG).show();
+                    e.printStackTrace();
+                }
+                alertDialog.dismiss();
+            }
+        });
+        Button btnNegative = dialogView.findViewById(R.id.btnNegative);
+        btnNegative.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                alertDialog.dismiss();
+            }
+        });
+        alertDialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        alertDialog.show();
     }
 
     @Override
