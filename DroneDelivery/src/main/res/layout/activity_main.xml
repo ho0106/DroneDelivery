@@ -232,9 +232,20 @@
         app:layout_constraintBottom_toBottomOf="parent">
 
         <Button
+            android:id="@+id/btnReturnDrone"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/ic_bottom_button_style"
+            android:text="드론 회수"
+            android:textSize="20dp"
+            android:textColor="#ffffff"
+            android:fontFamily="@font/fontstyles" />
+
+        <Button
             android:id="@+id/btnDeliveryStart"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginLeft="10dp"
             android:background="@drawable/ic_bottom_button_style"
             android:text="배달 시작"
             android:textSize="20dp"

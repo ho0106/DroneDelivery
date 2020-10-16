@@ -117,12 +117,13 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     // OrderLogList
     RecyclerView mOrderRecyclerView;
     OrderLog mOrderLog;
-    ArrayList mOrderDataLog = new ArrayList();
+    ArrayList<OrderData> mOrderDataLog = new ArrayList();
     List<LatLng> mOrderAddress = new ArrayList<>(); // 주문 좌표 저장 스택
     LatLng mOrderTarget; // 변경된 좌표 저장
     List<String> mReceiveAddress = new ArrayList<>();
     List<String> mReceiveRequest = new ArrayList<>();
     Random random;
+    private String mJsonString;
 
     // Drone
     private Drone drone;
@@ -145,6 +146,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         random = new Random();
+
+        GetData task = new GetData();
+        task.execute( "http://pp5273.dothome.co.kr/getjson2.php", "");
 
         // Full screen //
         int uiOptions = getWindow().getDecorView().getSystemUiVisibility();
@@ -197,8 +201,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         mOrderLinerLayoutManager.setReverseLayout(true);
         mOrderLinerLayoutManager.setStackFromEnd(true);
         mOrderRecyclerView.setLayoutManager(mOrderLinerLayoutManager);
-        mOrderDataLog = new ArrayList<Integer>(10);
-        mOrderLog = new OrderLog(mOrderDataLog);
+        mOrderDataLog = new ArrayList<>();
+        mOrderLog = new OrderLog(this, mOrderDataLog);
         mOrderRecyclerView.setAdapter(mOrderLog);
         checkOrder();
         delOrder();
@@ -1212,5 +1216,147 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 alertUserError("Connection Failed : " + msg);
                 break;
         }
+    }
+    private class GetData extends AsyncTask<String, Void, String>{
+
+        ProgressDialog progressDialog;
+        String errorString = null;
+
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+
+            progressDialog = ProgressDialog.show(MainActivity.this,
+                    "Please Wait", null, true, true);
+        }
+
+
+        @Override
+        protected void onPostExecute(String result) {
+            super.onPostExecute(result);
+
+            progressDialog.dismiss();
+            mTextViewResult.setText(result);
+            Log.d(TAG, "response - " + result);
+
+            if (result == null){
+
+                mTextViewResult.setText(errorString);
+            }
+            else {
+
+                mJsonString = result;
+                showResult();
+            }
+        }
+
+
+        @Override
+        protected String doInBackground(String... params) {
+
+            String serverURL = params[0];
+            String postParameters = params[1];
+
+
+            try {
+
+                URL url = new URL(serverURL);
+                HttpURLConnection httpURLConnection = (HttpURLConnection) url.openConnection();
+
+
+                httpURLConnection.setReadTimeout(5000);
+                httpURLConnection.setConnectTimeout(5000);
+                httpURLConnection.setRequestMethod("POST");
+                httpURLConnection.setDoInput(true);
+                httpURLConnection.connect();
+
+
+                OutputStream outputStream = httpURLConnection.getOutputStream();
+                outputStream.write(postParameters.getBytes("utf-8"));
+                outputStream.flush();
+                outputStream.close();
+
+
+                int responseStatusCode = httpURLConnection.getResponseCode();
+                Log.d(TAG, "response code - " + responseStatusCode);
+
+                InputStream inputStream;
+                if(responseStatusCode == HttpURLConnection.HTTP_OK) {
+                    inputStream = httpURLConnection.getInputStream();
+                }
+                else{
+                    inputStream = httpURLConnection.getErrorStream();
+                }
+
+
+                InputStreamReader inputStreamReader = new InputStreamReader(inputStream, "utf-8");
+                BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
+
+                StringBuilder sb = new StringBuilder();
+                String line;
+
+                while((line = bufferedReader.readLine()) != null){
+                    sb.append(line);
+                }
+
+                bufferedReader.close();
+
+                return sb.toString().trim();
+
+
+            } catch (Exception e) {
+
+                Log.d(TAG, "GetData : Error ", e);
+                errorString = e.toString();
+
+                return null;
+            }
+
+        }
+    }
+
+
+    private void showResult(){
+        String TAG_JSON = "webnautes";
+        String TAG_ID = "id";
+        String TAG_MENU = "menu";
+        String TAG_REQUEST ="request";
+        String TAG_ADDRESS ="address";
+        String TAG_POSTCODE ="postcode";
+
+
+        try {
+            JSONObject jsonObject = new JSONObject(mJsonString);
+            JSONArray jsonArray = jsonObject.getJSONArray(TAG_JSON);
+
+            for(int i=0;i<jsonArray.length();i++){
+
+                JSONObject item = jsonArray.getJSONObject(i);
+
+                String id = item.getString(TAG_ID);
+                String getmanu = item.getString(TAG_MENU);
+                String getrequest = item.getString(TAG_REQUEST);
+                String getaddress = item.getString(TAG_ADDRESS);
+                String getpostcode = item.getString(TAG_POSTCODE);
+
+                OrderData orderData = new OrderData();
+
+                orderData.setOrder_id(id);
+                orderData.setOrder_menu(getmanu);
+                orderData.setOrder_request(getrequest);
+                orderData.setOrder_address(getaddress);
+                orderData.setOrder_postcode(getpostcode);
+
+                mArrayList.add(orderData);
+                mAdapter.notifyDataSetChanged();
+            }
+
+
+
+        } catch (JSONException e) {
+
+            Log.d(TAG, "showResult : ", e);
+        }
+
     }
 }

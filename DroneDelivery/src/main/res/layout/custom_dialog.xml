@@ -67,6 +67,7 @@
                         android:layout_height="wrap_content"
                         android:fontFamily="@font/fontstyles"
                         android:gravity="center"
+                        android:hint="배달받을 주소"
                         android:text=""
                         android:textSize="@dimen/text_size"
                         android:textColor="@color/colorText" />
@@ -93,6 +94,7 @@
                         android:layout_height="wrap_content"
                         android:fontFamily="@font/fontstyles"
                         android:gravity="center"
+                        android:hint="나머지 주소"
                         android:text=""
                         android:textSize="@dimen/text_size"
                         android:textColor="@color/colorText" />
@@ -118,6 +120,7 @@
                         android:layout_height="wrap_content"
                         android:fontFamily="@font/fontstyles"
                         android:gravity="center"
+                        android:hint="요청사항"
                         android:text=""
                         android:textSize="@dimen/text_size"
                         android:textColor="@color/colorText" />
@@ -156,7 +159,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:fontFamily="@font/fontstyles"
-                        android:text="*****주소받기*****"
+                        android:text=""
                         android:textSize="@dimen/text_size"
                         android:textColor="@color/colorText" />
 
@@ -181,7 +184,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:fontFamily="@font/fontstyles"
-                        android:text="*****요청사항받기*****"
+                        android:text=""
                         android:textSize="@dimen/text_size"
                         android:textColor="@color/colorText" />
                 </LinearLayout>
@@ -222,6 +225,7 @@
                     android:layout_height="wrap_content"
                     android:fontFamily="@font/fontstyles"
                     android:gravity="center"
+                    android:hint="- 제외하고 입력해주세요"
                     android:text=""
                     android:textSize="@dimen/text_size"
                     android:textColor="@color/colorText" />
@@ -248,6 +252,7 @@
                     android:layout_height="wrap_content"
                     android:fontFamily="@font/fontstyles"
                     android:gravity="center"
+                    android:enabled="false"
                     android:text=""
                     android:textSize="@dimen/text_size"
                     android:textColor="@color/colorText" />
