@@ -147,9 +147,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         setContentView(R.layout.activity_main);
         random = new Random();
 
-        GetData task = new GetData();
-        task.execute( "http://pp5273.dothome.co.kr/getjson2.php", "");
-
         // Full screen //
         int uiOptions = getWindow().getDecorView().getSystemUiVisibility();
         int newUiOptions = uiOptions;
@@ -343,15 +340,15 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         mDroneLog.notifyDataSetChanged();
     }
 
-    protected void orderListLog(String message) {
-        // 주문 리스트 //
-        if (orderMarkerCount <= 50) {
-            mOrderDataLog.add(String.format(" %d - " + message, orderMarkerCount + 1));
-            orderMarkerCount++;
-        }
-        mOrderRecyclerView.smoothScrollToPosition(mOrderDataLog.size()-1);
-        mOrderLog.notifyDataSetChanged();
-    }
+//    protected void orderListLog(String message) {
+//        // 주문 리스트 //
+//        if (orderMarkerCount <= 50) {
+//            mOrderDataLog.add(String.format(" %d - " + message, orderMarkerCount + 1));
+//            orderMarkerCount++;
+//        }
+//        mOrderRecyclerView.smoothScrollToPosition(mOrderDataLog.size()-1);
+//        mOrderLog.notifyDataSetChanged();
+//    }
 
     protected void ttsPrint(String message) {
         tts.speak(message, TextToSpeech.QUEUE_FLUSH, null);
@@ -781,7 +778,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                         mNaverMap.moveCamera(cameraUpdate);
                         mReceiveAddress.add(address + " " + detailAddress);
                         mReceiveRequest.add(request);
-                        orderListLog("배달주소 : " + address + " " + detailAddress);
+                        //orderListLog("배달주소 : " + address + " " + detailAddress);
                         ttsPrint("새로운 주문이 접수되었습니다.");
                     }
                 }
@@ -1001,8 +998,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         mOrderLog.setOnItemClickListener(new OrderLog.OnItemClickListener() {
             @Override
             public void onItemClick(View v, final int pos) {
-                CameraUpdate cameraUpdate = CameraUpdate.scrollTo(mOrderAddress.get(pos)).animate(CameraAnimation.Linear);
-                mNaverMap.moveCamera(cameraUpdate);
+                //CameraUpdate cameraUpdate = CameraUpdate.scrollTo(mOrderAddress.get(pos)).animate(CameraAnimation.Linear);
+                //mNaverMap.moveCamera(cameraUpdate);
                 AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
                 View dialogView = getLayoutInflater().inflate(R.layout.custom_dialog, null);
                 builder.setView(dialogView);
@@ -1016,9 +1013,11 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 TextView message = dialogView.findViewById(R.id.message);
                 TextView address = dialogView.findViewById(R.id.receiveAddress);
                 TextView request = dialogView.findViewById(R.id.receiveRequest);
+                TextView menu = dialogView.findViewById(R.id.receiveMenu);
 
-                final String receiveAddress = mReceiveAddress.get(pos);
-                String receiveRequest = mReceiveRequest.get(pos);
+                final String receiveAddress = mOrderDataLog.get(pos).getOrder_address();
+                String receiveRequest = mOrderDataLog.get(pos).getOrder_request();
+                String receiveMenu = mOrderDataLog.get(pos).getOrder_menu();
 
                 addressLayout.setVisibility(View.GONE);
                 snsLayout.setVisibility(View.GONE);
@@ -1026,6 +1025,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 message.setVisibility(View.GONE);
                 address.setText(receiveAddress);
                 request.setText(receiveRequest);
+                menu.setText(receiveMenu);
 
                 Button btnPositive = dialogView.findViewById(R.id.btnPositive);
                 btnPositive.setOnClickListener(new View.OnClickListener() {
@@ -1085,8 +1085,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     public void onClick(View view) {
                         mOrderDataLog.remove(position);
                         mOrderLog.notifyItemRemoved(position);
-                        mOrderAddress.remove(position);
-                        orderMarker.get(position).setMap(null);
+                        //mOrderAddress.remove(position);
+                        //orderMarker.get(position).setMap(null);
                         alertDialog.dismiss();
                     }
                 });
@@ -1105,6 +1105,14 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         ItemTouchHelper itemTouchHelper = new ItemTouchHelper(simpleCallback);
         itemTouchHelper.attachToRecyclerView(mOrderRecyclerView);
+    }
+
+    public void refreshOrder(View view) {
+        mOrderDataLog.clear();
+        mOrderLog.notifyDataSetChanged();
+
+        GetData task = new GetData();
+        task.execute( "http://pp5273.dothome.co.kr/getjson2.php", "");
     }
 
 //    public void runGuideMode(View view) {
@@ -1236,12 +1244,12 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             super.onPostExecute(result);
 
             progressDialog.dismiss();
-            mTextViewResult.setText(result);
+            //mTextViewResult.setText(result);
             Log.d(TAG, "response - " + result);
 
             if (result == null){
 
-                mTextViewResult.setText(errorString);
+                //mTextViewResult.setText(errorString);
             }
             else {
 
@@ -1347,8 +1355,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 orderData.setOrder_address(getaddress);
                 orderData.setOrder_postcode(getpostcode);
 
-                mArrayList.add(orderData);
-                mAdapter.notifyDataSetChanged();
+                mOrderDataLog.add(orderData);
+                mOrderLog.notifyDataSetChanged();
             }
 
 

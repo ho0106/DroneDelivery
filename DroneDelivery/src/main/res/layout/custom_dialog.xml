@@ -196,6 +196,14 @@
                 android:text="주문 목록"
                 android:textSize="@dimen/text_size"
                 android:textColor="@color/colorText" />
+            <TextView
+                android:id="@+id/receiveMenu"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/fontstyles"
+                android:text=""
+                android:textSize="@dimen/text_size"
+                android:textColor="@color/colorText" />
         </LinearLayout>
 
         <LinearLayout
