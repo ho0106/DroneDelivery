@@ -25,20 +25,14 @@ public class OrderLog extends RecyclerView.Adapter<OrderLog.OrderLogViewHolder> 
     class OrderLogViewHolder extends RecyclerView.ViewHolder {
 
         protected TextView id;
-        //protected TextView menu;
-        //protected TextView request;
         protected TextView address;
-        //protected TextView postcode;
 
         public OrderLogViewHolder(View itemView) {
             super(itemView) ;
 
             // 뷰 객체에 대한 참조. (hold strong reference)
             this.id = (TextView) itemView.findViewById(R.id.orderID);
-            //this.menu = (TextView) itemView.findViewById(R.id.orderList);
-            //this.request = (TextView) itemView.findViewById(R.id.orderList);
             this.address = (TextView) itemView.findViewById(R.id.orderAddress);
-            //this.postcode = (TextView) itemView.findViewById(R.id.orderList);
 
             itemView.setOnClickListener(new View.OnClickListener() {
                 @Override
@@ -74,10 +68,7 @@ public class OrderLog extends RecyclerView.Adapter<OrderLog.OrderLogViewHolder> 
     @Override
     public void onBindViewHolder(@NonNull OrderLog.OrderLogViewHolder viewholder, int position) {
         viewholder.id.setText(mOrderLog.get(position).getOrder_id());
-        //viewholder.menu.setText(mOrderLog.get(position).getOrder_menu());
-        //viewholder.request.setText(mOrderLog.get(position).getOrder_request());
         viewholder.address.setText(mOrderLog.get(position).getOrder_address());
-        //viewholder.postcode.setText(mOrderLog.get(position).getOrder_postcode());
     }
 
     // getItemCount() - 전체 데이터 갯수 리턴.

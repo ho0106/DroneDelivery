@@ -118,12 +118,13 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     RecyclerView mOrderRecyclerView;
     OrderLog mOrderLog;
     ArrayList<OrderData> mOrderDataLog = new ArrayList();
-    List<LatLng> mOrderAddress = new ArrayList<>(); // 주문 좌표 저장 스택
     LatLng mOrderTarget; // 변경된 좌표 저장
-    List<String> mReceiveAddress = new ArrayList<>();
-    List<String> mReceiveRequest = new ArrayList<>();
+    //List<LatLng> mOrderAddress = new ArrayList<>(); // 주문 좌표 저장 스택
+    //List<String> mReceiveAddress = new ArrayList<>();
+    //List<String> mReceiveRequest = new ArrayList<>();
     Random random;
     private String mJsonString;
+    int orderNumber;
 
     // Drone
     private Drone drone;
@@ -647,30 +648,28 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     public void onClearButtonTap(View view) {
-        //if (this.drone.isConnected()) {
-        alertUser("주문 목록 & 배달 데이터 삭제");
-        ttsPrint("모든 데이터를 삭제합니다.");
+        if (this.drone.isConnected()) {
+            alertUser("주문 목록 & 배달 데이터 삭제");
+            ttsPrint("모든 데이터를 삭제합니다.");
 
-        poly.removeAll(poly);
-        mOrderDataLog.removeAll(mOrderDataLog);
-        mOrderLog.notifyDataSetChanged();
-        mOrderAddress.removeAll(mOrderAddress);
-        polylineOverlay.setMap(null);
-        mOrderTarget = null;
+            poly.removeAll(poly);
+            mOrderDataLog.removeAll(mOrderDataLog);
+            mOrderLog.notifyDataSetChanged();
+            polylineOverlay.setMap(null);
+            mOrderTarget = null;
 
         if (orderMarker.size() != 0) {
             for (int i = 0; i < orderMarker.size(); i++) {
                 orderMarker.get(i).setMap(null);
             }
         }
-        poly.clear();
-        orderMarker.clear();
-        mOrderDataLog.clear();
-        mOrderAddress.clear();
-        orderMarkerCount = 0;
-        //} else {
-        //alertUserError("먼저 드론을 연결해 주세요.");
-        //}
+            poly.clear();
+            orderMarker.clear();
+            mOrderDataLog.clear();
+            orderMarkerCount = 0;
+        } else {
+            alertUserError("먼저 드론을 연결해 주세요.");
+        }
     }
 
     public void onMapMoveButtonTap(View view) {
@@ -724,77 +723,76 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 break;
         }
     }
-
-    public void onBtnSetOrderTap(View view) {
-        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
-        View dialogView = getLayoutInflater().inflate(R.layout.custom_dialog, null);
-        builder.setView(dialogView);
-
-        final AlertDialog alertDialog = builder.create();
-        final Geocoder geocoder = new Geocoder(this);
-
-        // Dialog Layout //
-        LinearLayout orderDetailLayout = dialogView.findViewById(R.id.orderDetailLayout);
-        LinearLayout snsLayout = dialogView.findViewById(R.id.snsLayout);
-
-        TextView title = dialogView.findViewById(R.id.title);
-        TextView message = dialogView.findViewById(R.id.message);
-        message.setVisibility(View.GONE);
-        orderDetailLayout.setVisibility(View.GONE);
-        snsLayout.setVisibility(View.GONE);
-        title.setText("주소를 입력해 주세요");
-
-        final EditText addressText = dialogView.findViewById(R.id.addressBox);
-        final EditText detailAddressText = dialogView.findViewById(R.id.detailAddressBox);
-        final EditText requestText = dialogView.findViewById(R.id.requestBox);
-        Button btnPositive = dialogView.findViewById(R.id.btnPositive);
-        btnPositive.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                List<Address> list = null;
-
-                String address = addressText.getText().toString();
-                String detailAddress = detailAddressText.getText().toString();
-                String request = requestText.getText().toString();
-                try {
-                    list = geocoder.getFromLocationName(address,10);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    Log.e("test","입출력 오류 - 서버에서 주소변환시 에러발생.");
-                }
-
-                if (list != null) {
-                    if (list.size() == 0) {
-                        alertUserError("해당주소 없음.");
-                    } else {
-                        LatLng mar = new LatLng(list.get(0).getLatitude(), list.get(0).getLongitude());
-                        mOrderAddress.add(mar);
-                        CameraUpdate cameraUpdate = CameraUpdate.scrollTo(mar).animate(CameraAnimation.Linear);
-                        Marker marker = new Marker();
-
-                        marker.setPosition(mar);
-                        marker.setMap(mNaverMap);
-                        orderMarker.add(marker);
-                        mNaverMap.moveCamera(cameraUpdate);
-                        mReceiveAddress.add(address + " " + detailAddress);
-                        mReceiveRequest.add(request);
-                        //orderListLog("배달주소 : " + address + " " + detailAddress);
-                        ttsPrint("새로운 주문이 접수되었습니다.");
-                    }
-                }
-                alertDialog.dismiss();
-            }
-        });
-        Button btnNegative = dialogView.findViewById(R.id.btnNegative);
-        btnNegative.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                alertDialog.dismiss();
-            }
-        });
-        alertDialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-        alertDialog.show();
-    }
+// 수동 주문 설정 //
+//    public void onBtnSetOrderTap(View view) {
+//        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+//        View dialogView = getLayoutInflater().inflate(R.layout.custom_dialog, null);
+//        builder.setView(dialogView);
+//
+//        final AlertDialog alertDialog = builder.create();
+//        final Geocoder geocoder = new Geocoder(this);
+//
+//        // Dialog Layout //
+//        LinearLayout orderDetailLayout = dialogView.findViewById(R.id.orderDetailLayout);
+//        LinearLayout snsLayout = dialogView.findViewById(R.id.snsLayout);
+//
+//        TextView title = dialogView.findViewById(R.id.title);
+//        TextView message = dialogView.findViewById(R.id.message);
+//        message.setVisibility(View.GONE);
+//        orderDetailLayout.setVisibility(View.GONE);
+//        snsLayout.setVisibility(View.GONE);
+//        title.setText("주소를 입력해 주세요");
+//
+//        final EditText addressText = dialogView.findViewById(R.id.addressBox);
+//        final EditText detailAddressText = dialogView.findViewById(R.id.detailAddressBox);
+//        final EditText requestText = dialogView.findViewById(R.id.requestBox);
+//        Button btnPositive = dialogView.findViewById(R.id.btnPositive);
+//        btnPositive.setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View view) {
+//                List<Address> list = null;
+//
+//                String address = addressText.getText().toString();
+//                String detailAddress = detailAddressText.getText().toString();
+//                String request = requestText.getText().toString();
+//                try {
+//                    list = geocoder.getFromLocationName(address,10);
+//                } catch (IOException e) {
+//                    e.printStackTrace();
+//                    Log.e("test","입출력 오류 - 서버에서 주소변환시 에러발생.");
+//                }
+//
+//                if (list != null) {
+//                    if (list.size() == 0) {
+//                        alertUserError("해당주소 없음.");
+//                    } else {
+//                        LatLng mar = new LatLng(list.get(0).getLatitude(), list.get(0).getLongitude());
+//                        mOrderAddress.add(mar);
+//                        CameraUpdate cameraUpdate = CameraUpdate.scrollTo(mar).animate(CameraAnimation.Linear);
+//                        Marker marker = new Marker();
+//
+//                        marker.setPosition(mar);
+//                        marker.setMap(mNaverMap);
+//                        orderMarker.add(marker);
+//                        mNaverMap.moveCamera(cameraUpdate);
+//                        mReceiveAddress.add(address + " " + detailAddress);
+//                        mReceiveRequest.add(request);
+//                        ttsPrint("새로운 주문이 접수되었습니다.");
+//                    }
+//                }
+//                alertDialog.dismiss();
+//            }
+//        });
+//        Button btnNegative = dialogView.findViewById(R.id.btnNegative);
+//        btnNegative.setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View v) {
+//                alertDialog.dismiss();
+//            }
+//        });
+//        alertDialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+//        alertDialog.show();
+//    }
 
     // UI Updating //
 
@@ -848,7 +846,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
         // stop Guide Mode //
         if (vehicleMode == VehicleMode.COPTER_GUIDED) {
-            //LatLng orderTarget = new LatLng(mOrderTarget.getLatitude(), mOrderTarget.getLongitude());
             double distance = droneLocation.distanceTo(mOrderTarget);
 
             if (distance < 1.0) {
@@ -995,11 +992,10 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     // Delivery //
 
     public void checkOrder() {
+        final Geocoder geocoder = new Geocoder(this);
         mOrderLog.setOnItemClickListener(new OrderLog.OnItemClickListener() {
             @Override
             public void onItemClick(View v, final int pos) {
-                //CameraUpdate cameraUpdate = CameraUpdate.scrollTo(mOrderAddress.get(pos)).animate(CameraAnimation.Linear);
-                //mNaverMap.moveCamera(cameraUpdate);
                 AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
                 View dialogView = getLayoutInflater().inflate(R.layout.custom_dialog, null);
                 builder.setView(dialogView);
@@ -1018,6 +1014,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 final String receiveAddress = mOrderDataLog.get(pos).getOrder_address();
                 String receiveRequest = mOrderDataLog.get(pos).getOrder_request();
                 String receiveMenu = mOrderDataLog.get(pos).getOrder_menu();
+                orderNumber = pos;
 
                 addressLayout.setVisibility(View.GONE);
                 snsLayout.setVisibility(View.GONE);
@@ -1031,9 +1028,31 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 btnPositive.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View view) {
-                        //mOrderTarget = new LatLong(mOrderAddress.get(pos).latitude, mOrderAddress.get(pos).longitude);
-                        alertUser("배달 주소 좌표가 변경되었습니다.");
-                        ttsPrint("배달 좌표가 " + receiveAddress + " 로 변경되었습니다.");
+                        List<Address> list = null;
+
+                        try {
+                            list = geocoder.getFromLocationName(receiveAddress,10);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                            Log.e("test","입출력 오류 - 서버에서 주소변환시 에러발생.");
+                        }
+
+                        if (list != null) {
+                            if (list.size() == 0) {
+                                alertUserError("해당주소 없음.");
+                            } else {
+                                LatLng mar = new LatLng(list.get(0).getLatitude(), list.get(0).getLongitude());
+                                CameraUpdate cameraUpdate = CameraUpdate.scrollTo(mar).animate(CameraAnimation.Linear);
+                                Marker marker = new Marker();
+
+                                marker.setPosition(mar);
+                                marker.setMap(mNaverMap);
+                                orderMarker.add(marker);
+                                mNaverMap.moveCamera(cameraUpdate);
+                                alertUser("배달 주소 좌표가 변경되었습니다.");
+                                ttsPrint("배달 좌표가 " + receiveAddress + " 로 변경되었습니다.");
+                            }
+                        }
                         alertDialog.dismiss();
                     }
                 });
@@ -1085,8 +1104,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     public void onClick(View view) {
                         mOrderDataLog.remove(position);
                         mOrderLog.notifyItemRemoved(position);
-                        //mOrderAddress.remove(position);
-                        //orderMarker.get(position).setMap(null);
+                        orderMarker.get(position).setMap(null);
                         alertDialog.dismiss();
                     }
                 });
@@ -1113,6 +1131,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         GetData task = new GetData();
         task.execute( "http://pp5273.dothome.co.kr/getjson2.php", "");
+        ttsPrint("새로운 주문이 접수되었습니다.");
     }
 
 //    public void runGuideMode(View view) {
@@ -1158,58 +1177,64 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 //    }
 
     public void sendPassword(View view) {
-        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
-        View dialogView = getLayoutInflater().inflate(R.layout.custom_dialog, null);
-        builder.setView(dialogView);
+        if (orderNumber == 0) {
+            alertUser("주문 정보가 없습니다.");
+        } else {
+            AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+            View dialogView = getLayoutInflater().inflate(R.layout.custom_dialog, null);
+            builder.setView(dialogView);
 
-        final AlertDialog alertDialog = builder.create();
-        // Password create //
-        StringBuilder stringBuilder = new StringBuilder("");
-        for (int i = 0; i < 4; i++) {
-            stringBuilder.append(random.nextInt(9));
-        }
+            final AlertDialog alertDialog = builder.create();
+            // Password create //
+            StringBuilder stringBuilder = new StringBuilder("");
+            for (int i = 0; i < 4; i++) {
+                stringBuilder.append(random.nextInt(9));
+            }
 
-        // Dialog Layout //
-        LinearLayout addressLayout = dialogView.findViewById(R.id.addressLayout);
-        LinearLayout orderDetailLayout = dialogView.findViewById(R.id.orderDetailLayout);
-        TextView title = dialogView.findViewById(R.id.title);
-        TextView message = dialogView.findViewById(R.id.message);
+            // Dialog Layout //
+            LinearLayout addressLayout = dialogView.findViewById(R.id.addressLayout);
+            LinearLayout orderDetailLayout = dialogView.findViewById(R.id.orderDetailLayout);
+            TextView title = dialogView.findViewById(R.id.title);
+            TextView message = dialogView.findViewById(R.id.message);
 
-        addressLayout.setVisibility(View.GONE);
-        orderDetailLayout.setVisibility(View.GONE);
-        title.setText("암호 전송");
-        message.setText("핸드폰 번호와 암호를 입력하세요.");
+            addressLayout.setVisibility(View.GONE);
+            orderDetailLayout.setVisibility(View.GONE);
+            title.setText("암호 전송");
+            message.setText("핸드폰 번호와 암호를 입력하세요.");
 
-        final EditText phoneNoText = dialogView.findViewById(R.id.phoneNoBox);
-        final EditText passwordText = dialogView.findViewById(R.id.passwordBox);
-        passwordText.setText(stringBuilder.toString());
+            final EditText phoneNoText = dialogView.findViewById(R.id.phoneNoBox);
+            final EditText passwordText = dialogView.findViewById(R.id.passwordBox);
+            String receivePhoneNo = mOrderDataLog.get(orderNumber).getOrder_phoneNo();
+            phoneNoText.setText(receivePhoneNo);
+            passwordText.setText(stringBuilder.toString());
 
-        Button btnPositive = dialogView.findViewById(R.id.btnPositive);
-        btnPositive.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                String phoneNo = phoneNoText.getText().toString();
-                String password = passwordText.getText().toString();
-                try {
-                    SmsManager smsManager = SmsManager.getDefault();
-                    smsManager.sendTextMessage(phoneNo, null, password, null, null);
-                    Toast.makeText(getApplicationContext(), "전송 완료!", Toast.LENGTH_SHORT).show();
-                } catch (Exception e) {
-                    Toast.makeText(getApplicationContext(), "SNS faild, please try again later!", Toast.LENGTH_LONG).show();
-                    e.printStackTrace();
+            Button btnPositive = dialogView.findViewById(R.id.btnPositive);
+            btnPositive.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    String phoneNo = phoneNoText.getText().toString();
+                    String password = passwordText.getText().toString();
+                    try {
+                        SmsManager smsManager = SmsManager.getDefault();
+                        smsManager.sendTextMessage(phoneNo, null, password, null, null);
+                        Toast.makeText(getApplicationContext(), "전송 완료!", Toast.LENGTH_SHORT).show();
+                    } catch (Exception e) {
+                        Toast.makeText(getApplicationContext(), "SNS faild, please try again later!", Toast.LENGTH_LONG).show();
+                        e.printStackTrace();
+                    }
+                    alertDialog.dismiss();
                 }
-                alertDialog.dismiss();
-            }
-        });
-        Button btnNegative = dialogView.findViewById(R.id.btnNegative);
-        btnNegative.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                alertDialog.dismiss();
-            }
-        });
-        alertDialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-        alertDialog.show();
+            });
+            Button btnNegative = dialogView.findViewById(R.id.btnNegative);
+            btnNegative.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    alertDialog.dismiss();
+                }
+            });
+            alertDialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+            alertDialog.show();
+        }
     }
 
     @Override
@@ -1225,6 +1250,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 break;
         }
     }
+
+    // 주문정보 받아오기 //
+
     private class GetData extends AsyncTask<String, Void, String>{
 
         ProgressDialog progressDialog;
@@ -1248,7 +1276,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             Log.d(TAG, "response - " + result);
 
             if (result == null){
-
                 //mTextViewResult.setText(errorString);
             }
             else {
@@ -1261,16 +1288,12 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         @Override
         protected String doInBackground(String... params) {
-
             String serverURL = params[0];
             String postParameters = params[1];
 
-
             try {
-
                 URL url = new URL(serverURL);
                 HttpURLConnection httpURLConnection = (HttpURLConnection) url.openConnection();
-
 
                 httpURLConnection.setReadTimeout(5000);
                 httpURLConnection.setConnectTimeout(5000);
@@ -1278,24 +1301,22 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 httpURLConnection.setDoInput(true);
                 httpURLConnection.connect();
 
-
                 OutputStream outputStream = httpURLConnection.getOutputStream();
                 outputStream.write(postParameters.getBytes("utf-8"));
                 outputStream.flush();
                 outputStream.close();
 
-
                 int responseStatusCode = httpURLConnection.getResponseCode();
                 Log.d(TAG, "response code - " + responseStatusCode);
 
                 InputStream inputStream;
+
                 if(responseStatusCode == HttpURLConnection.HTTP_OK) {
                     inputStream = httpURLConnection.getInputStream();
                 }
                 else{
                     inputStream = httpURLConnection.getErrorStream();
                 }
-
 
                 InputStreamReader inputStreamReader = new InputStreamReader(inputStream, "utf-8");
                 BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
@@ -1306,65 +1327,54 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 while((line = bufferedReader.readLine()) != null){
                     sb.append(line);
                 }
-
                 bufferedReader.close();
 
                 return sb.toString().trim();
-
-
             } catch (Exception e) {
-
                 Log.d(TAG, "GetData : Error ", e);
                 errorString = e.toString();
-
                 return null;
             }
-
         }
     }
-
 
     private void showResult(){
         String TAG_JSON = "webnautes";
         String TAG_ID = "id";
         String TAG_MENU = "menu";
-        String TAG_REQUEST ="request";
-        String TAG_ADDRESS ="address";
-        String TAG_POSTCODE ="postcode";
-
+        String TAG_REQUEST = "request";
+        String TAG_ADDRESS = "address";
+        String TAG_POSTCODE = "postcode";
+        String TAG_PHONENO = "number";
 
         try {
             JSONObject jsonObject = new JSONObject(mJsonString);
             JSONArray jsonArray = jsonObject.getJSONArray(TAG_JSON);
 
             for(int i=0;i<jsonArray.length();i++){
-
                 JSONObject item = jsonArray.getJSONObject(i);
 
-                String id = item.getString(TAG_ID);
-                String getmanu = item.getString(TAG_MENU);
-                String getrequest = item.getString(TAG_REQUEST);
-                String getaddress = item.getString(TAG_ADDRESS);
-                String getpostcode = item.getString(TAG_POSTCODE);
+                String getId = item.getString(TAG_ID);
+                String getMenu = item.getString(TAG_MENU);
+                String getRequest = item.getString(TAG_REQUEST);
+                String getAddress = item.getString(TAG_ADDRESS);
+                String getPostcode = item.getString(TAG_POSTCODE);
+                String getPhoneNo = item.getString(TAG_PHONENO);
 
                 OrderData orderData = new OrderData();
 
-                orderData.setOrder_id(id);
-                orderData.setOrder_menu(getmanu);
-                orderData.setOrder_request(getrequest);
-                orderData.setOrder_address(getaddress);
-                orderData.setOrder_postcode(getpostcode);
+                orderData.setOrder_id(getId);
+                orderData.setOrder_menu(getMenu);
+                orderData.setOrder_request(getRequest);
+                orderData.setOrder_address(getAddress);
+                orderData.setOrder_postcode(getPostcode);
+                orderData.setOrder_phoneNo(getPhoneNo);
 
                 mOrderDataLog.add(orderData);
                 mOrderLog.notifyDataSetChanged();
             }
-
-
-
         } catch (JSONException e) {
-
             Log.d(TAG, "showResult : ", e);
         }
-
     }
 }

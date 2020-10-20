@@ -6,6 +6,7 @@ public class OrderData {
     private String order_request;
     private String order_address;
     private String order_postcode;
+    private String order_phoneNo;
 
     public String getOrder_id() {
         return order_id;
@@ -45,5 +46,13 @@ public class OrderData {
 
     public void setOrder_postcode(String order_postcode) {
         this.order_postcode = order_postcode;
+    }
+
+    public String getOrder_phoneNo() {
+        return order_phoneNo;
+    }
+
+    public void setOrder_phoneNo(String order_phoneNo) {
+        this.order_phoneNo = order_phoneNo;
     }
 }
