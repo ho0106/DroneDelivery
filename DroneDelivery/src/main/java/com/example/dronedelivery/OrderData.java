@@ -5,7 +5,6 @@ public class OrderData {
     private String order_menu;
     private String order_request;
     private String order_address;
-    private String order_postcode;
     private String order_phoneNo;
 
     public String getOrder_id() {
@@ -38,14 +37,6 @@ public class OrderData {
 
     public void setOrder_request(String order_request) {
         this.order_request = order_request;
-    }
-
-    public String getOrder_postcode() {
-        return order_postcode;
-    }
-
-    public void setOrder_postcode(String order_postcode) {
-        this.order_postcode = order_postcode;
     }
 
     public String getOrder_phoneNo() {

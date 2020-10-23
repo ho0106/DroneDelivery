@@ -239,8 +239,9 @@
             android:text="드론 회수"
             android:textSize="20dp"
             android:textColor="#ffffff"
-            android:fontFamily="@font/fontstyles" />
-<!--자동 배달 모드 비활성화
+            android:fontFamily="@font/fontstyles"
+            android:onClick="returnDrone"/>
+
         <Button
             android:id="@+id/btnDeliveryStart"
             android:layout_width="wrap_content"
@@ -251,8 +252,8 @@
             android:textSize="20dp"
             android:textColor="#ffffff"
             android:fontFamily="@font/fontstyles"
-            android:onClick="runGuideMode" />
--->
+            android:onClick="startDrone" />
+
         <Button
             android:id="@+id/btnArmTakeOff"
             android:layout_width="wrap_content"
